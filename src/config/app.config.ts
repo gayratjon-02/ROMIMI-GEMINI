@@ -5,3 +5,5 @@ export default registerAs('app', () => ({
 	secretToken: process.env.SECRET_TOKEN || 'default-secret-token',
 	nodeEnv: process.env.NODE_ENV || 'development',
 }));
+
+console.log(`SERVER IS RUNNING ON PORT: ${process.env.PORT_API}`);
