@@ -2,13 +2,22 @@ import {
 	Injectable,
 	NotFoundException,
 	ForbiddenException,
+	BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../database/entities/product.entity';
 import { Collection } from '../database/entities/collection.entity';
+import { Generation } from '../database/entities/generation.entity';
+import { ClaudeService } from '../ai/claude.service';
 import { CreateProductDto, UpdateProductDto } from '../libs/dto';
-import { NotFoundMessage, PermissionMessage } from '../libs/enums';
+import {
+	NotFoundMessage,
+	PermissionMessage,
+	FileMessage,
+	GenerationType,
+	GenerationStatus,
+} from '../libs/enums';
 
 @Injectable()
 export class ProductsService {
@@ -17,6 +26,9 @@ export class ProductsService {
 		private productsRepository: Repository<Product>,
 		@InjectRepository(Collection)
 		private collectionsRepository: Repository<Collection>,
+		@InjectRepository(Generation)
+		private generationsRepository: Repository<Generation>,
+		private readonly claudeService: ClaudeService,
 	) {}
 
 	async create(userId: string, createProductDto: CreateProductDto): Promise<Product> {
@@ -140,5 +152,67 @@ export class ProductsService {
 		const product = await this.findOne(id, userId);
 		await this.productsRepository.remove(product);
 		return { message: 'Product deleted successfully' };
+	}
+
+	async analyzeProduct(
+		id: string,
+		userId: string,
+	): Promise<{ extracted_variables: Record<string, any>; generations: Array<{ id: string; visuals: any[] }> }> {
+		const product = await this.productsRepository.findOne({
+			where: { id },
+			relations: ['collection', 'collection.brand'],
+		});
+
+		if (!product) {
+			throw new NotFoundException(NotFoundMessage.PRODUCT_NOT_FOUND);
+		}
+
+		if (!product.collection?.brand || product.collection.brand.user_id !== userId) {
+			throw new ForbiddenException(PermissionMessage.NOT_OWNER);
+		}
+
+		const images = [
+			product.front_image_url,
+			product.back_image_url,
+			...(product.reference_images || []),
+		].filter(Boolean) as string[];
+
+		if (!images.length) {
+			throw new BadRequestException(FileMessage.FILE_NOT_FOUND);
+		}
+
+		const extractedVariables = await this.claudeService.analyzeProduct({
+			images,
+			productName: product.name,
+			brandBrief: product.collection.brand.brand_brief || undefined,
+		});
+
+		product.extracted_variables = extractedVariables;
+		await this.productsRepository.save(product);
+
+		const visuals = await this.claudeService.generatePrompts({
+			productName: product.name,
+			brandBrief: product.collection.brand.brand_brief || undefined,
+			extractedVariables,
+			fixedElements: product.collection.fixed_elements || undefined,
+			promptTemplates: product.collection.prompt_templates || undefined,
+			count: 6,
+		});
+
+		const generation = this.generationsRepository.create({
+			product_id: product.id,
+			collection_id: product.collection_id,
+			user_id: userId,
+			generation_type: GenerationType.PRODUCT_VISUALS,
+			visuals,
+			status: GenerationStatus.COMPLETED,
+		});
+
+		const savedGeneration = await this.generationsRepository.save(generation);
+
+		return {
+			extracted_variables: extractedVariables,
+			generations: [{ id: savedGeneration.id, visuals: savedGeneration.visuals || [] }],
+		};
 	}
 }

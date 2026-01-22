@@ -13,6 +13,7 @@ import { BrandsModule } from './brands/brands.module';
 import { CollectionsModule } from './collections/collections.module';
 import { FilesModule } from './files/files.module';
 import { ProductsModule } from './products/products.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
 	imports: [
@@ -28,6 +29,7 @@ import { ProductsModule } from './products/products.module';
 		CollectionsModule,
 		FilesModule,
 		ProductsModule,
+		AiModule,
 	],
 	controllers: [],
 	providers: [],

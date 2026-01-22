@@ -103,4 +103,12 @@ export class ProductsController {
 	): Promise<{ message: string }> {
 		return this.productsService.remove(id, user.id);
 	}
+
+	@Post(':id/analyze')
+	async analyzeProduct(
+		@Param('id') id: string,
+		@CurrentUser() user: User,
+	): Promise<{ extracted_variables: Record<string, any>; generations: Array<{ id: string; visuals: any[] }> }> {
+		return this.productsService.analyzeProduct(id, user.id);
+	}
 }
