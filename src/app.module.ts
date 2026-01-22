@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { BrandsModule } from './brands/brands.module';
+import { CollectionsModule } from './collections/collections.module';
 
 @Module({
 	imports: [
@@ -21,6 +22,7 @@ import { BrandsModule } from './brands/brands.module';
 		AuthModule,
 		UsersModule,
 		BrandsModule,
+		CollectionsModule,
 	],
 	controllers: [],
 	providers: [],

@@ -51,7 +51,7 @@
   - `POST /api/brands` — Yangi brand yaratish
   - `PUT /api/brands/:id` — Brand yangilash
   - `DELETE /api/brands/:id` — Brand o'chirish
-
+<!-- end start -->
 #### 2.2 Collections Module
 - [ ] Collections service va controller
 - [ ] DTOs:
