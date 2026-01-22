@@ -1,8 +1,9 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LoggingInterceptor } from './libs/interceptor/Logging.interceptor';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 async function bootstrap() {
 	const logger = new Logger('Bootstrap');
@@ -23,6 +24,10 @@ async function bootstrap() {
 
 		// Global logging interceptor
 		app.useGlobalInterceptors(new LoggingInterceptor());
+
+		// Global JWT guard (barcha route'lar protected, @Public() bilan public qilinadi)
+		const reflector = app.get(Reflector);
+		app.useGlobalGuards(new JwtAuthGuard(reflector));
 
 		// API prefix
 		app.setGlobalPrefix('api');
