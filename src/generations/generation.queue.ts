@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Generation } from '../database/entities/generation.entity';
 import { GenerationProcessor } from './generation.processor';
 import { AiModule } from '../ai/ai.module';
+import { GenerationsService } from './generations.service';
 
 @Module({
 	imports: [
@@ -27,7 +28,7 @@ import { AiModule } from '../ai/ai.module';
 		TypeOrmModule.forFeature([Generation]),
 		AiModule,
 	],
-	providers: [GenerationProcessor],
+	providers: [GenerationProcessor, GenerationsService],
 	exports: [BullModule],
 })
 export class GenerationQueueModule {}

@@ -33,6 +33,9 @@ type GenerationFilters = {
 @Injectable()
 export class GenerationsService {
 	private readonly logger = new Logger(GenerationsService.name);
+	
+	// SSE subscribers for real-time updates
+	private sseSubscribers: Map<string, Array<(event: any) => void>> = new Map();;
 
 	constructor(
 		@InjectRepository(Generation)
@@ -474,5 +477,105 @@ export class GenerationsService {
 			default:
 				return 'jpg';
 		}
+	}
+
+	/**
+	 * Subscribe to real-time generation updates via SSE
+	 */
+	subscribeToGenerationUpdates(generationId: string, callback: (event: any) => void): () => void {
+		if (!this.sseSubscribers.has(generationId)) {
+			this.sseSubscribers.set(generationId, []);
+		}
+		
+		const subscribers = this.sseSubscribers.get(generationId)!;
+		subscribers.push(callback);
+		
+		this.logger.log(`New SSE subscriber for generation ${generationId}. Total: ${subscribers.length}`);
+		
+		// Return cleanup function
+		return () => {
+			const index = subscribers.indexOf(callback);
+			if (index > -1) {
+				subscribers.splice(index, 1);
+				this.logger.log(`SSE subscriber removed for generation ${generationId}. Remaining: ${subscribers.length}`);
+				
+				// Clean up empty subscriber lists
+				if (subscribers.length === 0) {
+					this.sseSubscribers.delete(generationId);
+				}
+			}
+		};
+	}
+
+	/**
+	 * Emit event to all SSE subscribers for a generation
+	 */
+	emitGenerationUpdate(generationId: string, event: any): void {
+		const subscribers = this.sseSubscribers.get(generationId);
+		if (subscribers && subscribers.length > 0) {
+			this.logger.log(`Emitting SSE event to ${subscribers.length} subscribers for generation ${generationId}: ${event.type}`);
+			
+			subscribers.forEach(callback => {
+				try {
+					callback({
+						...event,
+						generationId,
+						timestamp: new Date().toISOString()
+					});
+				} catch (error) {
+					this.logger.error(`Failed to emit SSE event: ${error.message}`);
+				}
+			});
+		}
+	}
+
+	/**
+	 * Emit visual completion event
+	 */
+	emitVisualCompleted(generationId: string, visualIndex: number, visual: any): void {
+		this.emitGenerationUpdate(generationId, {
+			type: 'visual_completed',
+			visualIndex,
+			visual: {
+				type: visual.type,
+				status: visual.status,
+				image_url: visual.image_url,
+				generated_at: visual.generated_at,
+				prompt: visual.prompt
+			}
+		});
+	}
+
+	/**
+	 * Emit visual processing event
+	 */
+	emitVisualProcessing(generationId: string, visualIndex: number, visualType: string): void {
+		this.emitGenerationUpdate(generationId, {
+			type: 'visual_processing',
+			visualIndex,
+			visualType
+		});
+	}
+
+	/**
+	 * Emit visual failed event
+	 */
+	emitVisualFailed(generationId: string, visualIndex: number, error: string): void {
+		this.emitGenerationUpdate(generationId, {
+			type: 'visual_failed',
+			visualIndex,
+			error
+		});
+	}
+
+	/**
+	 * Emit generation completed event
+	 */
+	emitGenerationCompleted(generationId: string, completedCount: number, totalCount: number): void {
+		this.emitGenerationUpdate(generationId, {
+			type: 'generation_completed',
+			completedCount,
+			totalCount
+		});
 	}
 }

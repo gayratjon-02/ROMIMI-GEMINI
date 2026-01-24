@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { Generation } from '../database/entities/generation.entity';
 import { GeminiService } from '../ai/gemini.service';
 import { GenerationStatus } from '../libs/enums';
+import { GenerationsService } from './generations.service';
 
 export interface GenerationJobData {
 	generationId: string;
@@ -21,6 +22,7 @@ export class GenerationProcessor {
 		@InjectRepository(Generation)
 		private readonly generationsRepository: Repository<Generation>,
 		private readonly geminiService: GeminiService,
+		private readonly generationsService: GenerationsService,
 	) {}
 
 	@Process()
@@ -67,6 +69,9 @@ export class GenerationProcessor {
 					visuals[i].status = 'processing';
 					generation.visuals = visuals;
 					await this.generationsRepository.save(generation);
+					
+					// Emit processing event immediately
+					this.generationsService.emitVisualProcessing(generationId, i, visuals[i].type);
 				}
 
 				try {
@@ -92,6 +97,8 @@ export class GenerationProcessor {
 					generation.visuals = visuals;
 					await this.generationsRepository.save(generation);
 					
+					// Emit completion event immediately
+					this.generationsService.emitVisualCompleted(generationId, i, visuals[i]);
 					
 					this.logger.log(`Completed image ${i + 1}/${prompts.length} for generation ${generationId}`);
 				} catch (error: any) {
@@ -106,6 +113,9 @@ export class GenerationProcessor {
 					
 					generation.visuals = visuals;
 					await this.generationsRepository.save(generation);
+					
+					// Emit failure event immediately
+					this.generationsService.emitVisualFailed(generationId, i, error?.message || 'Unknown error');
 				}
 			}
 
@@ -117,6 +127,10 @@ export class GenerationProcessor {
 				generation.status = GenerationStatus.COMPLETED;
 				generation.completed_at = new Date();
 				this.logger.log(`Generation ${generationId} completed successfully`);
+				
+				// Emit final completion event
+				const completedCount = visuals.filter(v => v.status === 'completed').length;
+				this.generationsService.emitGenerationCompleted(generationId, completedCount, visuals.length);
 			} else if (anyFailed) {
 				generation.status = GenerationStatus.FAILED;
 				this.logger.error(`Generation ${generationId} failed - some visuals failed`);
