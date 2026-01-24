@@ -1,5 +1,13 @@
 #!/bin/bash
 
+git reset --hard
+git pull origin master
+
+
+docker stop romimi-backend
+docker rm romimi-backend
+
+
 set -e
 
 echo "🚀 ROMIMI Backend Docker deployment boshlandi..."
