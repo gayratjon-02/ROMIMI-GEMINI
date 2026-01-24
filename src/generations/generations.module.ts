@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GenerationsService } from './generations.service';
 import { GenerationsController } from './generations.controller';
 import { GenerationEventsController } from './generation-events.controller';
+import { GenerationProcessor } from './generation.processor';
 import { Generation } from '../database/entities/generation.entity';
 import { Product } from '../database/entities/product.entity';
 import { Collection } from '../database/entities/collection.entity';
@@ -16,7 +17,7 @@ import { GenerationQueueModule } from './generation.queue';
 		GenerationQueueModule,
 	],
 	controllers: [GenerationsController, GenerationEventsController],
-	providers: [GenerationsService],
+	providers: [GenerationsService, GenerationProcessor],
 	exports: [GenerationsService],
 })
 export class GenerationsModule {}
