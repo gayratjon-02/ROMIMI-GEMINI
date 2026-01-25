@@ -230,26 +230,7 @@ export class GenerationsService {
 			throw new BadRequestException(GenerationMessage.GENERATION_IN_PROGRESS);
 		}
 
-		// Check daily generation limit (20 per user per day)
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-		const tomorrow = new Date(today);
-		tomorrow.setDate(tomorrow.getDate() + 1);
-
-		const todayGenerations = await this.generationsRepository
-			.createQueryBuilder('generation')
-			.where('generation.user_id = :userId', { userId })
-			.andWhere('generation.created_at >= :today', { today })
-			.andWhere('generation.created_at < :tomorrow', { tomorrow })
-			.getCount();
-
-		const dailyLimit = parseInt(process.env.DAILY_GENERATION_LIMIT || '20', 10);
-
-		if (todayGenerations >= dailyLimit) {
-			throw new BadRequestException(
-				`Daily generation limit reached (${dailyLimit}). Please try again tomorrow.`,
-			);
-		}
+		// Daily generation limit removed - no restrictions
 
 		const prompts = dto.prompts?.length ? dto.prompts : this.extractPrompts(generation.visuals || []);
 
