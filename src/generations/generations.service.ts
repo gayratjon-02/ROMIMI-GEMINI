@@ -621,18 +621,40 @@ export class GenerationsService {
 	 * Emit visual completion event
 	 */
 	emitVisualCompleted(generationId: string, userId: string, visualIndex: number, visual: any): void {
-		this.emitGenerationUpdate(generationId, {
+		// 🚀 CRITICAL: Debug image_url before emitting
+		this.logger.log(`📡 emitVisualCompleted called for visual ${visualIndex}:`, {
+			generationId,
+			visualIndex,
+			visualType: visual.type,
+			hasImageUrl: !!visual.image_url,
+			imageUrl: visual.image_url ? visual.image_url.substring(0, 100) : 'NULL',
+		});
+		
+		if (!visual.image_url) {
+			this.logger.error(`❌ CRITICAL: visual.image_url is NULL in emitVisualCompleted!`);
+			this.logger.error(`Visual object:`, JSON.stringify(visual, null, 2));
+		}
+		
+		const eventData = {
 			type: 'visual_completed',
 			userId,
 			visualIndex,
 			visual: {
 				type: visual.type,
 				status: visual.status,
-				image_url: visual.image_url,
+				image_url: visual.image_url, // This MUST NOT be null
 				generated_at: visual.generated_at,
 				prompt: visual.prompt
 			}
-		});
+		};
+		
+		// 🚀 CRITICAL: Verify image_url in event data
+		if (!eventData.visual.image_url) {
+			this.logger.error(`❌ CRITICAL ERROR: eventData.visual.image_url is NULL before emitGenerationUpdate!`);
+			this.logger.error(`Event data:`, JSON.stringify(eventData, null, 2));
+		}
+		
+		this.emitGenerationUpdate(generationId, eventData);
 	}
 
 	/**

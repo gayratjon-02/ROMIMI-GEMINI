@@ -96,18 +96,31 @@ export class GenerationProcessor {
 						generation.resolution
 					);
 					
+					// 🚀 CRITICAL: Debug result data
+					this.logger.log(`🔍 Image ${i + 1} generation result:`, {
+						hasData: !!result.data,
+						dataLength: result.data ? result.data.length : 0,
+						mimeType: result.mimeType,
+						hasText: !!result.text,
+					});
+					
 					// Save base64 image as file and get URL
 					let imageUrl: string | null = null;
 					if (result.data) {
 						try {
+							this.logger.log(`💾 Attempting to save image ${i + 1} to file...`);
 							const storedFile = await this.filesService.storeBase64Image(result.data, result.mimeType);
 							imageUrl = storedFile.url;
-							this.logger.log(`💾 Saved image ${i + 1} to file: ${storedFile.filename}, URL: ${imageUrl}`);
+							this.logger.log(`✅ Saved image ${i + 1} to file: ${storedFile.filename}, URL: ${imageUrl}`);
 						} catch (fileError: any) {
-							this.logger.error(`❌ Failed to save image ${i + 1} to file: ${fileError.message}`);
+							this.logger.error(`❌ Failed to save image ${i + 1} to file: ${fileError.message}`, fileError.stack);
 							// Fallback to base64 if file save fails
 							imageUrl = `data:${result.mimeType};base64,${result.data}`;
+							this.logger.log(`🔄 Using base64 fallback for image ${i + 1}`);
 						}
+					} else {
+						this.logger.error(`❌ Image ${i + 1} generation failed: No image data returned from Gemini`);
+						this.logger.error(`Result:`, { mimeType: result.mimeType, text: result.text?.substring(0, 200) });
 					}
 					
 					// Update this specific visual with result
@@ -127,25 +140,39 @@ export class GenerationProcessor {
 					await this.generationsRepository.save(generation);
 					
 					// 🎯 Emit completion event immediately when THIS image is ready
-					console.log(`🎉 IMAGE ${i + 1} COMPLETED! Emitting SSE event for visual ${i} (${visuals[i].type})`);
-					console.log('📸 Image URL:', imageUrl ? `${imageUrl.substring(0, 80)}...` : 'NO IMAGE');
-					console.log('📸 Full Image URL:', imageUrl);
+					this.logger.log(`🎉 IMAGE ${i + 1} COMPLETED! Emitting SSE event for visual ${i} (${visuals[i].type})`);
+					this.logger.log(`📸 Image URL: ${imageUrl ? `${imageUrl.substring(0, 80)}...` : 'NO IMAGE'}`);
+					this.logger.log(`📸 Full Image URL: ${imageUrl || 'NULL'}`);
 					
 					// 🚀 CRITICAL: Ensure image_url is properly set and emit with complete visual data
+					if (!imageUrl) {
+						this.logger.error(`❌ CRITICAL: Image ${i + 1} completed but imageUrl is NULL!`);
+						this.logger.error(`Visual data:`, JSON.stringify(visuals[i], null, 2));
+					}
+					
 					const completedVisual = {
 						...visuals[i],
 						type: visuals[i].type,
 						status: 'completed',
-						image_url: imageUrl, // Full URL (S3 or local)
+						image_url: imageUrl, // Full URL (S3 or local) - MUST NOT BE NULL
 						prompt: prompt,
 						generated_at: new Date().toISOString(),
 						mimeType: result.mimeType,
 					};
 					
+					// 🚀 CRITICAL: Verify image_url before emitting
+					if (!completedVisual.image_url) {
+						this.logger.error(`❌ CRITICAL ERROR: completedVisual.image_url is NULL before emitting SSE event!`);
+						this.logger.error(`Completed visual:`, JSON.stringify(completedVisual, null, 2));
+					}
+					
 					// Emit with complete visual data including image_url
 					this.generationsService.emitVisualCompleted(generationId, generation.user_id, i, completedVisual);
 					
-					this.logger.log(`✅ SSE Event emitted for visual ${i} with image_url: ${imageUrl ? 'YES' : 'NO'}`);
+					this.logger.log(`✅ SSE Event emitted for visual ${i} with image_url: ${completedVisual.image_url ? 'YES' : 'NO'}`);
+					if (completedVisual.image_url) {
+						this.logger.log(`✅ Image URL in SSE event: ${completedVisual.image_url.substring(0, 100)}`);
+					}
 					
 					this.logger.log(`✅ Completed image ${i + 1}/${prompts.length} (${visuals[i].type}) for generation ${generationId}`);
 					
