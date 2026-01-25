@@ -22,11 +22,11 @@ export class GeminiService {
 		resolution?: string
 	): Promise<GeminiImageResult> {
 		try {
-			// 🚀 CRITICAL: Use Imagen 4.0 Fast for real image generation
-			const imagenModel = modelName || 'imagen-4.0-fast-generate-001';
-			const model = this.getModel(imagenModel);
+			// 🚀 CRITICAL: Use Gemini 2.5 Flash Image Preview for image generation
+			const modelId = modelName || this.defaultModel;
+			const model = this.getModel(modelId);
 
-			this.logger.log(`🎨 Starting Imagen 4.0 Fast image generation for prompt: ${prompt.substring(0, 100)}...`);
+			this.logger.log(`🎨 Starting Gemini image generation (${modelId}) for prompt: ${prompt.substring(0, 100)}...`);
 			if (aspectRatio) {
 				this.logger.log(`Aspect ratio: ${aspectRatio}`);
 			}
@@ -43,27 +43,14 @@ export class GeminiService {
 				.replace(/\bpeople\b/gi, 'professional models');
 			
 			// 🎨 Build enhanced prompt for product photography
-			let enhancedPrompt = `Professional product photography: ${sanitizedPrompt}`;
+			const ratioText = aspectRatio || '1:1';
+			const resolutionText = resolution ? `${resolution} resolution` : 'high resolution';
+			let enhancedPrompt = `Professional product photography: ${sanitizedPrompt}. Aspect ratio: ${ratioText}. ${resolutionText}. High quality, sharp details, perfect lighting.`;
 
-			// 🎨 Map aspect ratio for Imagen 4.0
-			// Imagen supports: 1:1, 3:4, 4:3, 9:16, 16:9
-			let imagenAspectRatio = '1:1'; // Default
-			if (aspectRatio === '4:5') {
-				imagenAspectRatio = '3:4'; // Closest to 4:5
-			} else if (aspectRatio === '9:16') {
-				imagenAspectRatio = '9:16';
-			} else if (aspectRatio === '1:1') {
-				imagenAspectRatio = '1:1';
-			}
-
-			// Add aspect ratio to prompt
-			enhancedPrompt = `${enhancedPrompt}. Aspect ratio: ${imagenAspectRatio}. High quality, professional photography, sharp details, perfect lighting.`;
-
-			this.logger.log(`📐 Using Imagen aspect ratio: ${imagenAspectRatio}`);
+			this.logger.log(`📐 Using aspect ratio: ${ratioText}`);
 			this.logger.log(`📝 Final prompt: ${enhancedPrompt.substring(0, 200)}...`);
 
-			// 🚀 CRITICAL: Call Imagen 4.0 Fast API with proper configuration
-			// Imagen 4.0 uses different generation config than text models
+			// 🚀 CRITICAL: Call Gemini image generation model
 			const result = await model.generateContent({
 				contents: [
 					{
@@ -76,7 +63,6 @@ export class GeminiService {
 					},
 				],
 				generationConfig: {
-					// Imagen-specific config
 					responseMimeType: 'image/png', // Request image output
 				},
 			});
