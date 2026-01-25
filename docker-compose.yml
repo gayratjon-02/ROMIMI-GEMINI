@@ -28,12 +28,12 @@ services:
       SECRET_TOKEN: ${JWT_SECRET}
 
       # CORS
-      FRONTEND_URL: http://209.97.168.255:5030
+      FRONTEND_URL: ${FRONTEND_URL:-http://167.172.90.235:5030}
 
       # File Uploads
       FILE_STORAGE_PROVIDER: local
       UPLOAD_LOCAL_PATH: uploads
-      UPLOAD_BASE_URL: http://209.97.168.255:5031
+      UPLOAD_BASE_URL: ${UPLOAD_BASE_URL:-http://167.172.90.235:5031}
       UPLOAD_MAX_FILE_SIZE: 5242880
       UPLOAD_ALLOWED_MIME_TYPES: image/jpeg,image/png,image/webp
 
