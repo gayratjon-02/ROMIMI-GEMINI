@@ -150,6 +150,17 @@ export class ProductsService {
 
 	async remove(id: string, userId: string): Promise<{ message: string }> {
 		const product = await this.findOne(id, userId);
+		
+		// First, delete all related generations to avoid foreign key constraint errors
+		const relatedGenerations = await this.generationsRepository.find({
+			where: { product_id: id },
+		});
+		
+		if (relatedGenerations.length > 0) {
+			await this.generationsRepository.remove(relatedGenerations);
+		}
+		
+		// Now delete the product
 		await this.productsRepository.remove(product);
 		return { message: 'Product deleted successfully' };
 	}
