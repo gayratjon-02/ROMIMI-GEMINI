@@ -59,6 +59,7 @@ export class GenerationsService {
 	) {}
 
 	async create(userId: string, dto: CreateGenerationDto): Promise<Generation> {
+		// 🔍 Validate product exists and belongs to user
 		const product = await this.productsRepository.findOne({
 			where: { id: dto.product_id },
 			relations: ['collection', 'collection.brand'],
@@ -72,8 +73,9 @@ export class GenerationsService {
 			throw new ForbiddenException(PermissionMessage.NOT_OWNER);
 		}
 
+		// 🔍 Validate collection matches product's collection
 		if (product.collection_id !== dto.collection_id) {
-			throw new BadRequestException(ErrorMessage.BAD_REQUEST);
+			throw new BadRequestException('Collection ID does not match product\'s collection');
 		}
 
 		const collection = await this.collectionsRepository.findOne({
@@ -84,16 +86,36 @@ export class GenerationsService {
 			throw new NotFoundException(NotFoundMessage.COLLECTION_NOT_FOUND);
 		}
 
+		// ✅ No need to check collection ownership since product already belongs to user
+		// and product.collection_id matches dto.collection_id
+
+		// 🎨 Set default values for aspect_ratio and resolution if not provided
+		const aspectRatio = dto.aspect_ratio || '4:5'; // Default to 4:5 portrait
+		const resolution = dto.resolution || '4K'; // Default to 4K quality
+
+		this.logger.log(`📋 Creating generation for user ${userId}: product=${dto.product_id}, collection=${dto.collection_id}, aspect_ratio=${aspectRatio}, resolution=${resolution}`);
+
 		const generation = this.generationsRepository.create({
 			product_id: dto.product_id,
 			collection_id: dto.collection_id,
 			user_id: userId,
 			generation_type: dto.generation_type,
-			aspect_ratio: dto.aspect_ratio || undefined,
-			resolution: dto.resolution || undefined,
+			aspect_ratio: aspectRatio,
+			resolution: resolution,
 		});
 
-		return this.generationsRepository.save(generation);
+		// 💾 Save generation
+		const savedGeneration = await this.generationsRepository.save(generation);
+
+		// 🔄 Load with relations for enriched response
+		const enrichedGeneration = await this.generationsRepository.findOne({
+			where: { id: savedGeneration.id },
+			relations: ['product', 'collection'],
+		});
+
+		this.logger.log(`✅ Generation created successfully: ${savedGeneration.id}`);
+
+		return enrichedGeneration || savedGeneration;
 	}
 
 	async findAll(
