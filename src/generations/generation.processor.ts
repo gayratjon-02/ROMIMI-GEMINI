@@ -63,34 +63,26 @@ export class GenerationProcessor {
 			generation.visuals = visuals;
 			await this.generationsRepository.save(generation);
 
-			// 🚀 CRITICAL: Process all prompts in PARALLEL for true real-time progressive rendering
-			this.logger.log(`🚀 STARTING PARALLEL GENERATION: ${prompts.length} images for generation ${generationId}`);
-			console.log('🔍 Generation Details:', {
-				generationId,
-				userId: generation.user_id,
-				promptCount: prompts.length,
-				visualTypes: visuals.map(v => v.type)
-			});
+			// 📝 Process images SEQUENTIALLY to avoid stall issues and simplify flow
+			this.logger.log(`🚀 STARTING SEQUENTIAL GENERATION: ${prompts.length} images for generation ${generationId}`);
 			
-			// Start all images processing simultaneously
-			const imagePromises = prompts.map(async (prompt, i) => {
-				console.log(`🎯 Starting image ${i + 1}: ${visuals[i]?.type || 'unknown'}`);
+			// Process each image one by one
+			for (let i = 0; i < prompts.length; i++) {
+				const prompt = prompts[i];
+				this.logger.log(`🎯 Processing image ${i + 1}/${prompts.length}: ${visuals[i]?.type || 'unknown'}`);
 				
-				// Emit processing event immediately when starting
-				if (visuals[i]) {
-					visuals[i].status = 'processing';
-					generation.visuals = visuals;
-					await this.generationsRepository.save(generation);
-					
-					console.log(`📡 Emitting PROCESSING event for visual ${i}`);
-					this.generationsService.emitVisualProcessing(generationId, generation.user_id, i, visuals[i].type);
-					this.logger.log(`🔥 Started generating image ${i + 1}/${prompts.length} (${visuals[i].type}) for generation ${generationId}`);
-				}
+				// Update status to processing
+				visuals[i].status = 'processing';
+				generation.visuals = visuals;
+				await this.generationsRepository.save(generation);
+				
+				// Update job progress
+				job.progress(Math.round((i / prompts.length) * 100));
 
 				try {
-					// 🚀 CRITICAL: QATIYAN faqat gemini-3-pro-image-preview modelidan foydalanish
 					const geminiModel = model || process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 					this.logger.log(`🎨 Generating image ${i + 1} using Gemini model: ${geminiModel}...`);
+					
 					const result = await this.geminiService.generateImage(
 						prompt, 
 						geminiModel,
@@ -98,115 +90,51 @@ export class GenerationProcessor {
 						generation.resolution
 					);
 					
-					// 🚀 CRITICAL: Debug result data
-					this.logger.log(`🔍 Image ${i + 1} generation result:`, {
-						hasData: !!result.data,
-						dataLength: result.data ? result.data.length : 0,
-						mimeType: result.mimeType,
-					});
-					
 					// Save base64 image as file and get URL
 					let imageUrl: string | null = null;
 					if (result.data) {
 						try {
-							this.logger.log(`💾 Attempting to save image ${i + 1} to file...`);
 							const storedFile = await this.filesService.storeBase64Image(result.data, result.mimeType);
 							imageUrl = storedFile.url;
-							this.logger.log(`✅ Saved image ${i + 1} to file: ${storedFile.filename}, URL: ${imageUrl}`);
+							this.logger.log(`✅ Saved image ${i + 1}: ${imageUrl}`);
 						} catch (fileError: any) {
-							this.logger.error(`❌ Failed to save image ${i + 1} to file: ${fileError.message}`, fileError.stack);
-							// Fallback to base64 if file save fails
+							this.logger.error(`❌ Failed to save image ${i + 1}: ${fileError.message}`);
 							imageUrl = `data:${result.mimeType};base64,${result.data}`;
-							this.logger.log(`🔄 Using base64 fallback for image ${i + 1}`);
 						}
-					} else {
-						this.logger.error(`❌ Image ${i + 1} generation failed: No image data returned from Gemini`);
-						this.logger.error(`Result:`, { mimeType: result.mimeType });
 					}
 					
-					// Update this specific visual with result
+					// Update visual with result
 					visuals[i] = {
 						...visuals[i],
 						prompt,
 						mimeType: result.mimeType,
-						data: result.data, // Keep base64 data in DB for backup
 						status: 'completed',
 						image_url: imageUrl,
 						generated_at: new Date().toISOString(),
 					};
-
-					// Save progress immediately for this image
-					generation.visuals = visuals;
-					await this.generationsRepository.save(generation);
 					
-					// 🎯 Emit completion event immediately when THIS image is ready
-					this.logger.log(`🎉 IMAGE ${i + 1} COMPLETED! Emitting SSE event for visual ${i} (${visuals[i].type})`);
-					this.logger.log(`📸 Image URL: ${imageUrl ? `${imageUrl.substring(0, 80)}...` : 'NO IMAGE'}`);
-					this.logger.log(`📸 Full Image URL: ${imageUrl || 'NULL'}`);
+					this.logger.log(`✅ Image ${i + 1}/${prompts.length} completed (${visuals[i].type})`);
 					
-					// 🚀 CRITICAL: Ensure image_url is properly set and emit with complete visual data
-					if (!imageUrl) {
-						this.logger.error(`❌ CRITICAL: Image ${i + 1} completed but imageUrl is NULL!`);
-						this.logger.error(`Visual data:`, JSON.stringify(visuals[i], null, 2));
-					}
-					
-					const completedVisual = {
-						...visuals[i],
-						type: visuals[i].type,
-						status: 'completed',
-						image_url: imageUrl, // Full URL (S3 or local) - MUST NOT BE NULL
-						prompt: prompt,
-						generated_at: new Date().toISOString(),
-						mimeType: result.mimeType,
-					};
-					
-					// 🚀 CRITICAL: Verify image_url before emitting
-					if (!completedVisual.image_url) {
-						this.logger.error(`❌ CRITICAL ERROR: completedVisual.image_url is NULL before emitting SSE event!`);
-						this.logger.error(`Completed visual:`, JSON.stringify(completedVisual, null, 2));
-					}
-					
-					// Emit with complete visual data including image_url
-					this.generationsService.emitVisualCompleted(generationId, generation.user_id, i, completedVisual);
-					
-					this.logger.log(`✅ SSE Event emitted for visual ${i} with image_url: ${completedVisual.image_url ? 'YES' : 'NO'}`);
-					if (completedVisual.image_url) {
-						this.logger.log(`✅ Image URL in SSE event: ${completedVisual.image_url.substring(0, 100)}`);
-					}
-					
-					this.logger.log(`✅ Completed image ${i + 1}/${prompts.length} (${visuals[i].type}) for generation ${generationId}`);
-					
-					// Update job progress based on completed images
-					const completedCount = visuals.filter(v => v.status === 'completed' || v.status === 'failed').length;
-					job.progress(Math.round((completedCount / prompts.length) * 100));
-					
-					return result;
 				} catch (error: any) {
-					this.logger.error(`❌ Failed to generate image ${i + 1}/${prompts.length} (${visuals[i].type}): ${error?.message || error}`);
+					this.logger.error(`❌ Failed image ${i + 1}: ${error?.message || error}`);
 					
-					// Mark this specific visual as failed
 					visuals[i] = {
 						...visuals[i],
 						status: 'failed',
 						error: error?.message || 'Unknown error',
 					};
-					
-					generation.visuals = visuals;
-					await this.generationsRepository.save(generation);
-					
-					// Emit failure event immediately
-					this.generationsService.emitVisualFailed(generationId, generation.user_id, i, error?.message || 'Unknown error');
-					
-					return null;
 				}
-			});
+				
+				// Save progress after each image
+				generation.visuals = visuals;
+				await this.generationsRepository.save(generation);
+			}
+			
+			// Final progress
+			job.progress(100);
 
-			// Wait for ALL images to complete (but they process in parallel)
-			this.logger.log(`⏳ Waiting for all ${prompts.length} images to complete in parallel...`);
-			const results = await Promise.allSettled(imagePromises);
-
-			// Check final results after all parallel processing is complete
-			this.logger.log(`🏁 All parallel image generations finished for ${generationId}`);
+			// Check final results after sequential processing is complete
+			this.logger.log(`🏁 All image generations finished for ${generationId}`);
 			
 			const allCompleted = visuals.every((v) => v.status === 'completed');
 			const allFailed = visuals.every((v) => v.status === 'failed');
@@ -223,27 +151,18 @@ export class GenerationProcessor {
 			if (allFailed) {
 				generation.status = GenerationStatus.FAILED;
 				this.logger.error(`❌ Generation ${generationId} failed - all ${visuals.length} images failed`);
-				this.generationsService.emitGenerationCompleted(generationId, generation.user_id, GenerationStatus.FAILED);
 			} else if (allCompleted) {
 				generation.status = GenerationStatus.COMPLETED;
 				generation.completed_at = new Date();
 				this.logger.log(`🎉 Generation ${generationId} completed successfully - all ${visuals.length} images generated!`);
-				this.generationsService.emitGenerationCompleted(generationId, generation.user_id, GenerationStatus.COMPLETED);
 			} else if (anyFailed) {
 				// Partial success - mark as completed but with errors
 				generation.status = GenerationStatus.COMPLETED;
 				generation.completed_at = new Date();
 				this.logger.warn(`⚠️ Generation ${generationId} completed with ${failedCount} failures, ${completedCount} succeeded`);
-				this.generationsService.emitGenerationCompleted(generationId, generation.user_id, GenerationStatus.COMPLETED);
 			}
-
-			// Emit generation_done event when all visuals are processed (regardless of success/failure)
-			this.generationsService.emitGenerationDone(generationId, generation.user_id, {
-				completed: completedCount,
-				failed: failedCount,
-				total: visuals.length,
-				status: generation.status,
-			});
+			
+			this.logger.log(`📊 Generation ${generationId} finished: ${completedCount} completed, ${failedCount} failed`);
 
 			await this.generationsRepository.save(generation);
 		} catch (error) {
