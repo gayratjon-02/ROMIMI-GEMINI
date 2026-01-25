@@ -7,6 +7,7 @@ import { Generation } from '../database/entities/generation.entity';
 import { GeminiService } from '../ai/gemini.service';
 import { GenerationStatus } from '../libs/enums';
 import { GenerationsService } from './generations.service';
+import { FilesService } from '../files/files.service';
 
 export interface GenerationJobData {
 	generationId: string;
@@ -23,6 +24,7 @@ export class GenerationProcessor {
 		private readonly generationsRepository: Repository<Generation>,
 		private readonly geminiService: GeminiService,
 		private readonly generationsService: GenerationsService,
+		private readonly filesService: FilesService,
 	) {}
 
 	@Process()
@@ -84,15 +86,29 @@ export class GenerationProcessor {
 					// Generate this image independently
 					const result = await this.geminiService.generateImage(prompt, model);
 					
+					// Save base64 image as file and get URL
+					let imageUrl: string | null = null;
+					if (result.data) {
+						try {
+							const storedFile = await this.filesService.storeBase64Image(result.data, result.mimeType);
+							imageUrl = storedFile.url;
+							this.logger.log(`💾 Saved image ${i + 1} to file: ${storedFile.filename}, URL: ${imageUrl}`);
+						} catch (fileError: any) {
+							this.logger.error(`❌ Failed to save image ${i + 1} to file: ${fileError.message}`);
+							// Fallback to base64 if file save fails
+							imageUrl = `data:${result.mimeType};base64,${result.data}`;
+						}
+					}
+					
 					// Update this specific visual with result
 					visuals[i] = {
 						...visuals[i],
 						prompt,
 						mimeType: result.mimeType,
-						data: result.data,
+						data: result.data, // Keep base64 data in DB for backup
 						text: result.text,
 						status: 'completed',
-						image_url: result.data ? `data:${result.mimeType};base64,${result.data}` : null,
+						image_url: imageUrl,
 						generated_at: new Date().toISOString(),
 					};
 
@@ -102,9 +118,13 @@ export class GenerationProcessor {
 					
 					// 🎯 Emit completion event immediately when THIS image is ready
 					console.log(`🎉 IMAGE ${i + 1} COMPLETED! Emitting SSE event for visual ${i} (${visuals[i].type})`);
-					console.log('📸 Image data length:', visuals[i].image_url ? visuals[i].image_url.length : 'NO IMAGE');
+					console.log('📸 Image URL:', imageUrl ? `${imageUrl.substring(0, 50)}...` : 'NO IMAGE');
 					
-					this.generationsService.emitVisualCompleted(generationId, generation.user_id, i, visuals[i]);
+					// Emit with only URL (not base64 data)
+					this.generationsService.emitVisualCompleted(generationId, generation.user_id, i, {
+						...visuals[i],
+						image_url: imageUrl, // Only URL, not base64
+					});
 					
 					this.logger.log(`✅ Completed image ${i + 1}/${prompts.length} (${visuals[i].type}) for generation ${generationId}`);
 					

@@ -11,6 +11,7 @@ import { Product } from '../database/entities/product.entity';
 import { Collection } from '../database/entities/collection.entity';
 import { AiModule } from '../ai/ai.module';
 import { GenerationQueueModule } from './generation.queue';
+import { FilesModule } from '../files/files.module';
 
 @Module({
 	imports: [
@@ -25,6 +26,7 @@ import { GenerationQueueModule } from './generation.queue';
 		}),
 		AiModule,
 		GenerationQueueModule,
+		FilesModule,
 	],
 	controllers: [GenerationsController, GenerationEventsController],
 	providers: [GenerationsService, GenerationProcessor],
