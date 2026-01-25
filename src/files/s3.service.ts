@@ -74,7 +74,7 @@ export class S3Service {
 			} else {
 				// Check for custom endpoint (R2, MinIO, etc.)
 				const endpointConfig = this.s3Client.config.endpoint;
-				if (endpointConfig && typeof endpointConfig === 'object' && 'url' in endpointConfig) {
+				if (endpointConfig && typeof endpointConfig === 'object' && endpointConfig !== null && 'url' in endpointConfig) {
 					const endpoint = (endpointConfig as any).url as string;
 					url = `${endpoint.replace(/\/$/, '')}/${this.bucket}/${cleanPath}`;
 				} else {
@@ -126,7 +126,7 @@ export class S3Service {
 			return `${this.baseUrl.replace(/\/$/, '')}/${cleanPath}`;
 		} else if (this.s3Client?.config.endpoint) {
 			const endpointConfig = this.s3Client.config.endpoint;
-			if (typeof endpointConfig === 'object' && 'url' in endpointConfig) {
+			if (endpointConfig && typeof endpointConfig === 'object' && endpointConfig !== null && 'url' in endpointConfig) {
 				const endpoint = (endpointConfig as any).url as string;
 				return `${endpoint.replace(/\/$/, '')}/${this.bucket}/${cleanPath}`;
 			}
