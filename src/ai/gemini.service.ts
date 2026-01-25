@@ -2,19 +2,16 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI, type Part, type EnhancedGenerateContentResponse } from '@google/generative-ai';
 import { AIMessage } from '../libs/enums';
+import { GEMINI_MODEL, GeminiImageResult } from 'src/libs/config';
 
-type GeminiImageResult = {
-	mimeType: string;
-	data?: string;
-	text?: string;
-};
+
 
 @Injectable()
 export class GeminiService {
 	private client: GoogleGenerativeAI | null = null;
 	private readonly logger = new Logger(GeminiService.name);
 
-	private readonly defaultModel = 'gemini-3-pro-image-preview';
+	private readonly defaultModel = GEMINI_MODEL;
 
 	constructor(private readonly configService: ConfigService) { }
 
@@ -44,10 +41,10 @@ export class GeminiService {
 			});
 
 			const response = result.response;
-			
+
 			// Check for inline image data
 			const inlineData = this.extractInlineData(response);
-			
+
 			if (inlineData?.data) {
 				this.logger.log(`Successfully generated image (${inlineData.mimeType})`);
 				return {
