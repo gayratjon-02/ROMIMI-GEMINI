@@ -235,8 +235,17 @@ export class GenerationsService {
 			throw new BadRequestException(GenerationMessage.NO_VISUALS_FOUND);
 		}
 
-		// Extract visual types from generation.visuals if available
-		const visualTypes = generation.visuals?.map((v: any) => v.type).filter(Boolean);
+		// Extract visual types: prefer dto.visualTypes, then generation.visuals, then undefined
+		let visualTypes: string[] | undefined;
+		if (dto.visualTypes && dto.visualTypes.length === prompts.length) {
+			// Use visual types from DTO (from frontend)
+			visualTypes = dto.visualTypes;
+			this.logger.log(`📋 Using visual types from DTO: ${visualTypes.join(', ')}`);
+		} else if (generation.visuals && Array.isArray(generation.visuals) && generation.visuals.length === prompts.length) {
+			// Fallback to visual types from generation.visuals
+			visualTypes = generation.visuals.map((v: any) => v.type).filter(Boolean);
+			this.logger.log(`📋 Using visual types from generation.visuals: ${visualTypes.join(', ')}`);
+		}
 
 		// Add job to queue instead of processing synchronously
 		const job = await this.generationQueue.add(
