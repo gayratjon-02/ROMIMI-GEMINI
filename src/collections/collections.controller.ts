@@ -22,11 +22,16 @@ export interface DATemplate {
 	};
 }
 
+/**
+ * Predefined DA Templates - READ-ONLY for users
+ * Users can SELECT these but CANNOT modify them
+ * Only admins can add/edit DA templates (done in code)
+ */
 const DA_TEMPLATES: DATemplate[] = [
 	{
 		code: 'ss26',
 		name: 'SS26 - Summer Studio',
-		description: 'Fresh summer collection with bright, natural lighting',
+		description: 'Yozgi shinam xona - Fresh summer collection with bright, natural lighting',
 		fixed_elements: {
 			background: 'Clean white cyclorama with soft shadows',
 			lighting: 'Natural daylight simulation, soft fill light, minimal shadows',
@@ -39,7 +44,7 @@ const DA_TEMPLATES: DATemplate[] = [
 	{
 		code: 'fw26',
 		name: 'FW26 - Winter Elegance',
-		description: 'Sophisticated fall/winter collection with warm tones',
+		description: 'Qishki nafis studiya - Sophisticated fall/winter collection',
 		fixed_elements: {
 			background: 'Dark charcoal textured wall with subtle spotlight',
 			lighting: 'Dramatic side lighting, warm tungsten accents, deep shadows',
@@ -47,6 +52,19 @@ const DA_TEMPLATES: DATemplate[] = [
 			model_styling: 'Dark wool trousers, oxford leather shoes, vintage watch',
 			mood: 'Sophisticated, cozy, intellectual warmth',
 			color_palette: ['#2C2C2C', '#8B4513', '#DAA520', '#F5F5DC'],
+		},
+	},
+	{
+		code: 'blood',
+		name: 'BLOOD - Dark Studio',
+		description: "To'q rangli studiya - Bold, dramatic dark aesthetic",
+		fixed_elements: {
+			background: 'Deep matte black studio wall with red accent lighting',
+			lighting: 'High contrast dramatic lighting, sharp shadows, red rim lights',
+			decor: ['Black geometric sculptures', 'Smoked glass elements', 'Metallic red accents'],
+			model_styling: 'All black outfit, black leather boots, silver rings',
+			mood: 'Bold, dramatic, powerful, edgy',
+			color_palette: ['#0A0A0A', '#8B0000', '#1A1A1A', '#C41E3A'],
 		},
 	},
 	{
@@ -99,6 +117,19 @@ const DA_TEMPLATES: DATemplate[] = [
 			model_styling: 'Tailored black trousers, Italian leather loafers, gold cufflinks',
 			mood: 'Opulent, refined, aspirational',
 			color_palette: ['#722F37', '#D4AF37', '#1C1C1C', '#F8F8FF'],
+		},
+	},
+	{
+		code: 'coastal',
+		name: 'Coastal Breeze',
+		description: 'Dengiz bo\'yi - Mediterranean coastal atmosphere',
+		fixed_elements: {
+			background: 'Light sandy beige backdrop with subtle wave texture',
+			lighting: 'Soft golden morning light, ocean reflection simulation',
+			decor: ['Wicker furniture', 'Seashells', 'White cotton throws', 'Driftwood pieces'],
+			model_styling: 'Linen shorts, espadrilles, straw hat nearby',
+			mood: 'Relaxed, vacation, coastal elegance',
+			color_palette: ['#F5DEB3', '#87CEEB', '#FFFFFF', '#DEB887'],
 		},
 	},
 ];
