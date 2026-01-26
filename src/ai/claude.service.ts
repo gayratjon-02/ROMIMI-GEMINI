@@ -448,6 +448,42 @@ export class ClaudeService {
 		return this.readLocalImage(image);
 	}
 
+	private detectImageFormat(buffer: Buffer): ClaudeImageMediaType {
+		// Check magic bytes to detect actual image format
+		if (buffer.length < 4) {
+			return 'image/jpeg'; // Default fallback
+		}
+
+		const header = buffer.subarray(0, 4);
+		
+		// PNG: 89 50 4E 47
+		if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47) {
+			return 'image/png';
+		}
+		
+		// JPEG: FF D8 FF
+		if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) {
+			return 'image/jpeg';
+		}
+		
+		// GIF: 47 49 46 38 (GIF8)
+		if (header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x38) {
+			return 'image/gif';
+		}
+		
+		// WebP: Check for RIFF...WEBP
+		if (buffer.length >= 12) {
+			const riffHeader = buffer.subarray(0, 4).toString();
+			const webpHeader = buffer.subarray(8, 12).toString();
+			if (riffHeader === 'RIFF' && webpHeader === 'WEBP') {
+				return 'image/webp';
+			}
+		}
+		
+		// Default to JPEG if unknown
+		return 'image/jpeg';
+	}
+
 	private async fetchImage(url: string): Promise<{ data: string; mediaType: ClaudeImageMediaType }> {
 		const response = await fetch(url);
 
@@ -461,8 +497,16 @@ export class ClaudeService {
 
 		const arrayBuffer = await response.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
+		
+		// Detect format from buffer (more reliable than content-type header)
+		const detectedType = this.detectImageFormat(buffer);
 		const contentType = response.headers.get('content-type');
-		const mediaType = this.normalizeMediaType(contentType?.split(';')[0] || this.guessMimeType(url));
+		const headerType = contentType ? this.normalizeMediaType(contentType.split(';')[0]) : null;
+		
+		// Use detected type if header type doesn't match or is missing
+		const mediaType = headerType && headerType === detectedType ? headerType : detectedType;
+		
+		this.logger.log(`Image format detected: ${mediaType} (header: ${contentType}, detected: ${detectedType})`);
 
 		return { data: buffer.toString('base64'), mediaType };
 	}
@@ -487,9 +531,20 @@ export class ClaudeService {
 
 		const buffer = await readFile(existing);
 
+		// Detect format from buffer (more reliable than file extension)
+		const detectedType = this.detectImageFormat(buffer);
+		const guessedType = this.guessMimeType(existing);
+		
+		// Use detected type if it's valid, otherwise fall back to guessed type
+		const mediaType = detectedType !== 'image/jpeg' || guessedType === 'image/jpeg' 
+			? detectedType 
+			: this.normalizeMediaType(guessedType);
+
+		this.logger.log(`Local image format: ${mediaType} (file: ${existing}, detected: ${detectedType}, guessed: ${guessedType})`);
+
 		return {
 			data: buffer.toString('base64'),
-			mediaType: this.normalizeMediaType(this.guessMimeType(existing)),
+			mediaType,
 		};
 	}
 
