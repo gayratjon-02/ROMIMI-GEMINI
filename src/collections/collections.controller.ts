@@ -30,8 +30,8 @@ export interface DATemplate {
 const DA_TEMPLATES: DATemplate[] = [
 	{
 		code: 'ss26',
-		name: 'SS26 - Summer Studio',
-		description: 'Yozgi shinam xona - Fresh summer collection with bright, natural lighting',
+		name: 'SS26',
+		description: 'Summer studio, bright natural lighting',
 		fixed_elements: {
 			background: 'Clean white cyclorama with soft shadows',
 			lighting: 'Natural daylight simulation, soft fill light, minimal shadows',
@@ -43,8 +43,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'fw26',
-		name: 'FW26 - Winter Elegance',
-		description: 'Qishki nafis studiya - Sophisticated fall/winter collection',
+		name: 'FW26',
+		description: 'Winter elegance, warm tones',
 		fixed_elements: {
 			background: 'Dark charcoal textured wall with subtle spotlight',
 			lighting: 'Dramatic side lighting, warm tungsten accents, deep shadows',
@@ -56,8 +56,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'blood',
-		name: 'BLOOD - Dark Studio',
-		description: "To'q rangli studiya - Bold, dramatic dark aesthetic",
+		name: 'BLOOD',
+		description: 'Dark dramatic aesthetic',
 		fixed_elements: {
 			background: 'Deep matte black studio wall with red accent lighting',
 			lighting: 'High contrast dramatic lighting, sharp shadows, red rim lights',
@@ -69,8 +69,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'minimal',
-		name: 'Minimal Pure',
-		description: 'Ultra-clean minimalist aesthetic',
+		name: 'MINIMAL',
+		description: 'Ultra-clean minimalist',
 		fixed_elements: {
 			background: 'Pure white infinity cove, no visible edges',
 			lighting: 'Even, shadowless lighting from all sides',
@@ -82,8 +82,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'urban',
-		name: 'Urban Street',
-		description: 'Contemporary urban streetwear setting',
+		name: 'URBAN',
+		description: 'Streetwear setting',
 		fixed_elements: {
 			background: 'Industrial concrete wall with exposed brick accents',
 			lighting: 'Mixed natural and neon accent lighting',
@@ -95,8 +95,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'nature',
-		name: 'Nature Studio',
-		description: 'Organic, nature-inspired studio environment',
+		name: 'NATURE',
+		description: 'Organic earth tones',
 		fixed_elements: {
 			background: 'Sage green seamless paper with natural texture',
 			lighting: 'Golden hour simulation, warm and soft',
@@ -108,8 +108,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'luxury',
-		name: 'Luxury Editorial',
-		description: 'High-end luxury magazine editorial style',
+		name: 'LUXURY',
+		description: 'High-end editorial',
 		fixed_elements: {
 			background: 'Rich velvet curtain backdrop in deep burgundy',
 			lighting: 'Rembrandt lighting with soft gold reflectors',
@@ -121,8 +121,8 @@ const DA_TEMPLATES: DATemplate[] = [
 	},
 	{
 		code: 'coastal',
-		name: 'Coastal Breeze',
-		description: 'Dengiz bo\'yi - Mediterranean coastal atmosphere',
+		name: 'COASTAL',
+		description: 'Mediterranean vibes',
 		fixed_elements: {
 			background: 'Light sandy beige backdrop with subtle wave texture',
 			lighting: 'Soft golden morning light, ocean reflection simulation',
