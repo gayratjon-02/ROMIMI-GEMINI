@@ -450,7 +450,8 @@ export class GenerationsService {
 
 		const collection = product?.collection;
 
-		const archive = archiver('zip', { zlib: { level: 9 } });
+		// Use level 1 for fastest compression (still good compression ratio for images)
+		const archive = archiver('zip', { zlib: { level: 1 } });
 
 		// Create folder structure: Collection/Product/visuals
 		const collectionName = collection?.name || 'Unknown';
@@ -458,16 +459,24 @@ export class GenerationsService {
 		const sanitizedCollectionName = this.sanitizeFileName(collectionName);
 		const sanitizedProductName = this.sanitizeFileName(productName);
 
-		// Process visuals sequentially to handle async fetch
-		for (let index = 0; index < visuals.length; index++) {
-			const visual = visuals[index];
+		// Visual type mapping
+		const visualTypeMap: Record<string, string> = {
+			duo: 'duo',
+			solo: 'solo',
+			flatlay_front: 'flatlay_front',
+			flatlay_back: 'flatlay_back',
+			closeup_front: 'closeup_front',
+			closeup_back: 'closeup_back',
+		};
+
+		// Process visuals in PARALLEL for faster download
+		const processVisual = async (visual: any, index: number): Promise<{ buffer: Buffer; filePath: string } | null> => {
 			if (!visual || visual.status !== 'completed') {
-				continue; // Skip failed or pending visuals
+				return null;
 			}
 
 			let buffer: Buffer;
 			let ext: string;
-			let fileName: string;
 
 			// Handle different data formats
 			if (visual.data) {
@@ -491,37 +500,37 @@ export class GenerationsService {
 							ext = this.extensionFromMime(contentType);
 						} else {
 							this.logger.warn(`Failed to fetch image from URL: ${visual.image_url}`);
-							continue; // Skip if fetch fails
+							return null;
 						}
 					} catch (error) {
 						this.logger.error(`Error fetching image from URL: ${visual.image_url}`, error);
-						continue; // Skip on error
+						return null;
 					}
 				} else {
-					// Skip if not base64 or URL
-					continue;
+					return null;
 				}
 			} else {
-				// Skip if no data
-				continue;
+				return null;
 			}
 
 			// Generate filename based on visual type
 			const visualType = visual.type || `visual_${index + 1}`;
-			const visualTypeMap: Record<string, string> = {
-				duo: 'duo',
-				solo: 'solo',
-				flatlay_front: 'flatlay_front',
-				flatlay_back: 'flatlay_back',
-				closeup_front: 'closeup_front',
-				closeup_back: 'closeup_back',
-			};
-
-			fileName = visualTypeMap[visualType] || `visual_${index + 1}`;
-			// Spec requires: ROMIMI/{Collection}/{Product}/duo.png...
+			const fileName = visualTypeMap[visualType] || `visual_${index + 1}`;
 			const filePath = `ROMIMI/${sanitizedCollectionName}/${sanitizedProductName}/${fileName}.${ext}`;
 
-			archive.append(buffer, { name: filePath });
+			return { buffer, filePath };
+		};
+
+		// Fetch all images in parallel
+		const results = await Promise.all(
+			visuals.map((visual, index) => processVisual(visual, index))
+		);
+
+		// Add all successfully fetched images to archive
+		for (const result of results) {
+			if (result) {
+				archive.append(result.buffer, { name: result.filePath });
+			}
 		}
 
 		archive.finalize();
