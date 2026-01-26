@@ -462,18 +462,51 @@ Generate the 6 merged prompts now. Return ONLY valid JSON object with the struct
 
 	private buildProductAnalysisPrompt(input: AnalyzeProductInput): string {
 		const lines = [
-			'You are a visual analyst for product ads.',
-			'Analyze the product images and return a JSON object with keys:',
-			'product_name, colors, materials, textures, patterns, fit, style, features, background_ideas, lighting, camera, mood, props, keywords.',
-			'Use arrays for list fields. Use null when unknown. Return JSON only.',
+			'You are an expert fashion product analyst.',
+			'',
+			'Analyze the provided product images and extract detailed information in JSON format.',
+			'',
+			'Return ONLY valid JSON with this structure:',
+			'{',
+			'  "product_type": "string (e.g. zip tracksuit set, polo shirt, jacket)",',
+			'  "product_name": "string (full product name)",',
+			'  "color_name": "string (e.g. Forest Green, Bleu Ardoise)",',
+			'  "color_hex": "string (hex code, e.g. #2D5016)",',
+			'  "material": "string (e.g. Polyester blend, Suède, Coton)",',
+			'  "details": {',
+			'    "piping": "string (if visible)",',
+			'    "zip": "string (if applicable)",',
+			'    "collar": "string",',
+			'    "pockets": "string",',
+			'    "fit": "string",',
+			'    "sleeves": "string"',
+			'  },',
+			'  "logo_front": {',
+			'    "type": "string (e.g. Romimi script embroidery)",',
+			'    "color": "string",',
+			'    "position": "string (e.g. chest left)",',
+			'    "size": "string"',
+			'  },',
+			'  "logo_back": {',
+			'    "type": "string (e.g. RR monogram circle)",',
+			'    "color": "string",',
+			'    "position": "string (e.g. center upper back)",',
+			'    "size": "string"',
+			'  },',
+			'  "texture_description": "string (detailed texture description)",',
+			'  "additional_details": ["array of strings"],',
+			'  "confidence_score": 0.0-1.0',
+			'}',
+			'',
+			'Be extremely detailed and accurate.',
 		];
 
 		if (input.productName) {
-			lines.push(`Product name: ${input.productName}`);
+			lines.push(`Product name hint: ${input.productName}`);
 		}
 
 		if (input.brandBrief) {
-			lines.push(`Brand brief: ${input.brandBrief}`);
+			lines.push(`Brand context: ${input.brandBrief}`);
 		}
 
 		if (input.notes) {
