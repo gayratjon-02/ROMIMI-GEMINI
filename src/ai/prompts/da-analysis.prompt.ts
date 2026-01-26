@@ -40,4 +40,4 @@ Return ONLY valid JSON with this structure:
   "quality": "string (e.g. 8K editorial Vogue style)"
 }
 
-Focus on visual elements that should be CONSISTENT across all product shots. Extract background colors (with hex codes), props, mood, lighting, composition, and styling details.`;
+Focus on visual elements that should be CONSISTENT across all product shots.`;
