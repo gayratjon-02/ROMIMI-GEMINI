@@ -132,7 +132,16 @@ export class ClaudeService {
 			throw new BadRequestException('Product JSON and DA JSON are required');
 		}
 
-		const promptText = `${MERGE_PROMPT_TEMPLATE}
+		try {
+			// Check for explicit Mock Mode
+			if (process.env.MOCK_AI === 'true') {
+				this.logger.warn('⚠️ MOCK MODE ENABLED: Returning static merged prompts');
+				const { MOCK_MERGED_PROMPTS } = await import('./mock-claude.data');
+				// Return a deep copy to avoid mutation issues
+				return JSON.parse(JSON.stringify(MOCK_MERGED_PROMPTS));
+			}
+
+			const promptText = `${MERGE_PROMPT_TEMPLATE}
 
 Product JSON:
 ${JSON.stringify(productJSON, null, 2)}
@@ -144,57 +153,65 @@ Collection Name: ${collectionName}
 
 Generate the 6 merged prompts now. Return ONLY valid JSON object with the structure specified above.`;
 
-		const content: ClaudeContentBlock[] = [
-			{ type: 'text', text: promptText },
-		];
+			const content: ClaudeContentBlock[] = [
+				{ type: 'text', text: promptText },
+			];
 
-		const response = await this.createMessage({
-			content,
-			max_tokens: 4000,
-		});
-
-		const text = this.extractText(response.content);
-		let parsed = this.parseJson(text);
-
-		if (!parsed) {
-			this.logger.error('Failed to parse merged prompts JSON', { text });
-			throw new InternalServerErrorException('Failed to parse merged prompts');
-		}
-
-		// Handle array response (convert to object)
-		if (Array.isArray(parsed)) {
-			this.logger.warn('Claude returned array instead of object, converting...');
-			const converted: Record<string, any> = {};
-			const types = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'];
-			parsed.forEach((item, index) => {
-				const type = item.type || types[index];
-				if (type) {
-					converted[type] = item;
-				}
+			const response = await this.createMessage({
+				content,
+				max_tokens: 4000,
 			});
-			parsed = converted;
-		}
 
-		// Validate structure
-		const requiredTypes = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'];
-		for (const type of requiredTypes) {
-			if (!parsed[type]) {
-				this.logger.error(`Missing prompt type: ${type}`, { parsed: Object.keys(parsed) });
-				throw new InternalServerErrorException(`Missing prompt type: ${type}`);
+			const text = this.extractText(response.content);
+			let parsed = this.parseJson(text);
+
+			if (!parsed) {
+				this.logger.error('Failed to parse merged prompts JSON', { text });
+				throw new InternalServerErrorException('Failed to parse merged prompts');
 			}
+
+			// Handle array response (convert to object)
+			if (Array.isArray(parsed)) {
+				this.logger.warn('Claude returned array instead of object, converting...');
+				const converted: Record<string, any> = {};
+				const types = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'];
+				parsed.forEach((item, index) => {
+					const type = item.type || types[index];
+					if (type) {
+						converted[type] = item;
+					}
+				});
+				parsed = converted;
+			}
+
+			// Validate structure
+			const requiredTypes = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'];
+			for (const type of requiredTypes) {
+				if (!parsed[type]) {
+					this.logger.error(`Missing prompt type: ${type}`, { parsed: Object.keys(parsed) });
+					throw new InternalServerErrorException(`Missing prompt type: ${type}`);
+				}
+			}
+
+			// Add editable flag and last_edited_at
+			const result: MergedPrompts = {
+				duo: { ...parsed.duo, editable: true, last_edited_at: null },
+				solo: { ...parsed.solo, editable: true, last_edited_at: null },
+				flatlay_front: { ...parsed.flatlay_front, editable: true, last_edited_at: null },
+				flatlay_back: { ...parsed.flatlay_back, editable: true, last_edited_at: null },
+				closeup_front: { ...parsed.closeup_front, editable: true, last_edited_at: null },
+				closeup_back: { ...parsed.closeup_back, editable: true, last_edited_at: null },
+			};
+
+			return result;
+		} catch (error) {
+			this.logger.error(`❌ Claude API Error in mergeProductAndDA: ${error.message}`);
+			
+			// 🚀 FALLBACK: If API fails (e.g. billing, rate limit), use mock data
+			this.logger.warn('⚠️ FALLBACK FACTIVATED: Returning MOCK merged prompts due to API error');
+			const { MOCK_MERGED_PROMPTS } = await import('./mock-claude.data');
+			return JSON.parse(JSON.stringify(MOCK_MERGED_PROMPTS));
 		}
-
-		// Add editable flag and last_edited_at
-		const result: MergedPrompts = {
-			duo: { ...parsed.duo, editable: true, last_edited_at: null },
-			solo: { ...parsed.solo, editable: true, last_edited_at: null },
-			flatlay_front: { ...parsed.flatlay_front, editable: true, last_edited_at: null },
-			flatlay_back: { ...parsed.flatlay_back, editable: true, last_edited_at: null },
-			closeup_front: { ...parsed.closeup_front, editable: true, last_edited_at: null },
-			closeup_back: { ...parsed.closeup_back, editable: true, last_edited_at: null },
-		};
-
-		return result;
 	}
 
 	async generatePrompts(input: GeneratePromptsInput): Promise<string[]> {

@@ -23,6 +23,10 @@ export class CreateCollectionDto {
 	@IsOptional()
 	code?: string;
 
+	@IsString()
+	@IsOptional()
+	description?: string;
+
 	@ValidateNested()
 	@Type(() => FixedElementsDto)
 	@IsOptional()
