@@ -40,10 +40,10 @@ type GenerationFilters = {
 @Injectable()
 export class GenerationsService {
 	private readonly logger = new Logger(GenerationsService.name);
-	
+
 	// SSE Subject for real-time updates
 	private readonly generationEvents = new Subject<any>();
-	
+
 	// ZIP cache: generationId -> { filePath, createdAt, timeout }
 	private readonly zipCache = new Map<string, { filePath: string; createdAt: Date; timeout: NodeJS.Timeout }>();
 
@@ -64,7 +64,7 @@ export class GenerationsService {
 		private readonly geminiService: GeminiService,
 		private readonly claudeService: ClaudeService,
 		private readonly filesService: FilesService,
-	) {}
+	) { }
 
 	async create(userId: string, dto: CreateGenerationDto): Promise<Generation> {
 		// 🔍 Validate product exists and belongs to user
@@ -327,8 +327,8 @@ export class GenerationsService {
 		}
 
 		// If visualTypes are provided, use them; otherwise use index-based or existing types
-		const visualTypes = dto.visualTypes && dto.visualTypes.length === dto.prompts.length 
-			? dto.visualTypes 
+		const visualTypes = dto.visualTypes && dto.visualTypes.length === dto.prompts.length
+			? dto.visualTypes
 			: null;
 
 		// If prompts are provided, update visuals with prompts and preserve types if they exist
@@ -386,19 +386,31 @@ export class GenerationsService {
 		} else if (dto.visualTypes?.length && generation.merged_prompts) {
 			// Extract prompts from merged_prompts based on requested visual types
 			this.logger.log(`🔍 Extracting prompts from merged_prompts for types: ${dto.visualTypes.join(', ')}`);
-			
+
+			// Normalize visual type keys (handle both old uppercase and new lowercase formats)
+			const typeNormalizer: Record<string, string> = {
+				'DUO': 'duo',
+				'SOLO': 'solo',
+				'FLAT_F': 'flatlay_front',
+				'FLAT_B': 'flatlay_back',
+				'CLOSE_F': 'closeup_front',
+				'CLOSE_B': 'closeup_back',
+			};
+
 			const validItems = dto.visualTypes.map(type => {
-				const promptData = (generation.merged_prompts as any)[type];
+				// Normalize type key
+				const normalizedType = typeNormalizer[type] || type;
+				const promptData = (generation.merged_prompts as any)[normalizedType];
 				if (!promptData || !promptData.prompt) {
-					this.logger.warn(`⚠️ No prompt found for visual type: ${type}`);
+					this.logger.warn(`⚠️ No prompt found for visual type: ${type} (normalized: ${normalizedType})`);
 					return null;
 				}
-				return { type, prompt: promptData.prompt };
+				return { type: normalizedType, prompt: promptData.prompt };
 			}).filter(item => item !== null) as { type: string, prompt: string }[];
 
 			prompts = validItems.map(item => item.prompt);
 			visualTypes = validItems.map(item => item.type);
-			
+
 			this.logger.log(`📋 Using filtered visual types: ${visualTypes.join(', ')}`);
 		} else {
 			prompts = this.extractPrompts(generation.visuals || []);
@@ -452,7 +464,7 @@ export class GenerationsService {
 		// Reset generation status
 		generation.status = GenerationStatus.PENDING;
 		generation.completed_at = null;
-		
+
 		// Clear any existing visuals progress
 		if (generation.visuals) {
 			generation.visuals = generation.visuals.map((visual: any) => ({
@@ -478,28 +490,28 @@ export class GenerationsService {
 		failed_jobs: any[];
 	}> {
 		const geminiApiKey = this.configService.get<string>('gemini.apiKey');
-		
+
 		this.logger.log(`Debug - Gemini API Key configured: ${!!geminiApiKey}`);
-		
+
 		let redisConnected = false;
 		let jobCounts = {};
 		let activeJobs = [];
 		let failedJobs = [];
-		
+
 		try {
 			jobCounts = await this.generationQueue.getJobCounts();
 			redisConnected = true;
-			
+
 			// Get active jobs
 			activeJobs = await this.generationQueue.getActive();
-			
+
 			// Get failed jobs
 			failedJobs = await this.generationQueue.getFailed();
-			
+
 			this.logger.log(`Debug - Redis connected. Job counts: ${JSON.stringify(jobCounts)}`);
 			this.logger.log(`Debug - Active jobs: ${activeJobs.length}`);
 			this.logger.log(`Debug - Failed jobs: ${failedJobs.length}`);
-			
+
 		} catch (error) {
 			this.logger.error(`Debug - Redis/Queue error: ${error.message}`);
 		}
@@ -509,16 +521,16 @@ export class GenerationsService {
 			model: 'gemini-2.5-flash-image',
 			redis_connected: redisConnected,
 			queue_status: jobCounts,
-			active_jobs: activeJobs.map(job => ({ 
-				id: job.id, 
+			active_jobs: activeJobs.map(job => ({
+				id: job.id,
 				name: job.name,
 				data: job.data,
 				processedOn: job.processedOn,
-				finishedOn: job.finishedOn 
+				finishedOn: job.finishedOn
 			})),
-			failed_jobs: failedJobs.map(job => ({ 
-				id: job.id, 
-				name: job.name, 
+			failed_jobs: failedJobs.map(job => ({
+				id: job.id,
+				name: job.name,
 				failedReason: job.failedReason,
 				data: job.data
 			}))
@@ -527,7 +539,7 @@ export class GenerationsService {
 
 	async testJob(): Promise<{ message: string }> {
 		this.logger.log('🧪 Adding test job to queue...');
-		
+
 		const job = await this.generationQueue.add(
 			{
 				generationId: 'test-job-' + Date.now(),
@@ -542,7 +554,7 @@ export class GenerationsService {
 		);
 
 		this.logger.log(`🧪 Test job added with ID: ${job.id}`);
-		
+
 		return {
 			message: `Test job added with ID: ${job.id}. Check logs for processing.`,
 		};
@@ -554,10 +566,10 @@ export class GenerationsService {
 		try {
 			// Clean failed jobs
 			await this.generationQueue.clean(0, 'failed');
-			
+
 			// Clean active jobs  
 			await this.generationQueue.clean(0, 'active');
-			
+
 			// Clean completed jobs
 			await this.generationQueue.clean(0, 'completed');
 
@@ -891,11 +903,11 @@ export class GenerationsService {
 					const fs = await import('fs/promises');
 					buffer = await fs.readFile(localPath);
 					ext = visual.image_filename.split('.').pop() || 'jpg';
-					
+
 					const visualType = visual.type || `visual_${index + 1}`;
 					const fileName = visualTypeMap[visualType] || `visual_${index + 1}`;
 					const filePath = `ROMIMI/${sanitizedCollectionName}/${sanitizedProductName}/${fileName}.${ext}`;
-					
+
 					return { buffer, filePath };
 				} catch (err) {
 					// File not found locally, fall back to URL fetch
@@ -1022,12 +1034,12 @@ export class GenerationsService {
 			generationId,
 			timestamp: new Date().toISOString()
 		};
-		
+
 		this.logger.log(`🎯 SSE: Emitting event for generation ${generationId}: ${event.type} (visualIndex: ${event.visualIndex})`);
 		console.log('📡 SSE Event Data:', JSON.stringify(eventData, null, 2));
-		
+
 		this.generationEvents.next(eventData);
-		
+
 		// Verify the event was emitted
 		this.logger.log(`✅ SSE: Event emitted successfully to ${this.generationEvents.observers?.length || 0} observers`);
 	}
@@ -1044,12 +1056,12 @@ export class GenerationsService {
 			hasImageUrl: !!visual.image_url,
 			imageUrl: visual.image_url ? visual.image_url.substring(0, 100) : 'NULL',
 		});
-		
+
 		if (!visual.image_url) {
 			this.logger.error(`❌ CRITICAL: visual.image_url is NULL in emitVisualCompleted!`);
 			this.logger.error(`Visual object:`, JSON.stringify(visual, null, 2));
 		}
-		
+
 		const eventData = {
 			type: 'visual_completed',
 			userId,
@@ -1062,13 +1074,13 @@ export class GenerationsService {
 				prompt: visual.prompt
 			}
 		};
-		
+
 		// 🚀 CRITICAL: Verify image_url in event data
 		if (!eventData.visual.image_url) {
 			this.logger.error(`❌ CRITICAL ERROR: eventData.visual.image_url is NULL before emitGenerationUpdate!`);
 			this.logger.error(`Event data:`, JSON.stringify(eventData, null, 2));
 		}
-		
+
 		this.emitGenerationUpdate(generationId, eventData);
 	}
 
