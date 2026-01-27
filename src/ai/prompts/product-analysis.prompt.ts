@@ -2,6 +2,13 @@ export const PRODUCT_ANALYSIS_PROMPT = `You are an expert fashion product analys
 
 Analyze the provided product images and extract detailed information in JSON format.
 
+CRITICAL RULES:
+1. NEVER use placeholder values like "Unknown", "Not visible", "N/A", or "TBD"
+2. ALWAYS make a definitive best guess based on visual pixel data
+3. If a color looks black/dark, confidently state "Black" not "Unknown Color"
+4. If material appears shiny/puffy, infer "Nylon" or "Polyester", not "Unknown Material"
+5. If a logo is not visible, state "No logo visible" not "Unknown"
+
 Return ONLY valid JSON with this structure:
 {
   "product_type": "string (e.g. zip tracksuit set, polo shirt, jacket)",
