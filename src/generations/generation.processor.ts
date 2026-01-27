@@ -81,12 +81,15 @@ export class GenerationProcessor {
 			await this.generationsRepository.save(generation);
 
 			// Socket.IO: generation started
-			this.generationGateway.emitProgress(generationId, {
-				progress_percent: 0,
-				completed: 0,
-				total: visuals.length,
-				elapsed_seconds: 0,
-			});
+			// Small delay to allow frontend socket to connect and subscribe
+			setTimeout(() => {
+				this.generationGateway.emitProgress(generationId, {
+					progress_percent: 0,
+					completed: 0,
+					total: visuals.length,
+					elapsed_seconds: 0,
+				});
+			}, 1500); // 1.5s delay to ensure frontend is subscribed
 			
 			const geminiModel = model || process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 			
