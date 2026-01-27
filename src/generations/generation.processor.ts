@@ -9,7 +9,6 @@ import { GeminiService } from '../ai/gemini.service';
 import { GenerationStatus } from '../libs/enums';
 import { GenerationsService } from './generations.service';
 import { FilesService } from '../files/files.service';
-import { GenerationGateway } from './generation.gateway';
 
 export interface GenerationJobData {
 	generationId: string;
@@ -30,7 +29,6 @@ export class GenerationProcessor {
 		private readonly geminiService: GeminiService,
 		private readonly generationsService: GenerationsService,
 		private readonly filesService: FilesService,
-		private readonly generationGateway: GenerationGateway,
 	) {}
 
 	@Process()
@@ -80,16 +78,7 @@ export class GenerationProcessor {
 			generation.visuals = visuals;
 			await this.generationsRepository.save(generation);
 
-			// Socket.IO: generation started
-			// Small delay to allow frontend socket to connect and subscribe
-			setTimeout(() => {
-				this.generationGateway.emitProgress(generationId, {
-					progress_percent: 0,
-					completed: 0,
-					total: visuals.length,
-					elapsed_seconds: 0,
-				});
-			}, 1500); // 1.5s delay to ensure frontend is subscribed
+			// Generation started - frontend will poll for updates
 			
 			const geminiModel = model || process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 			
@@ -144,28 +133,7 @@ export class GenerationProcessor {
 					await this.generationsRepository.save(generation);
 					job.progress(generation.progress_percent);
 
-					// Socket.IO: visual completed – real-time card update
-					const started = generation.started_at ? new Date(generation.started_at) : new Date();
-					const elapsedSeconds = Math.floor((Date.now() - started.getTime()) / 1000);
-					let estimatedRemaining: number | undefined;
-					if (generation.progress_percent > 0 && generation.progress_percent < 100) {
-						estimatedRemaining = Math.ceil((elapsedSeconds / generation.progress_percent) * (100 - generation.progress_percent));
-					}
-					this.generationGateway.emitVisualCompleted(generationId, {
-						type: visualType,
-						index: i,
-						image_url: visuals[i].image_url,
-						generated_at: visuals[i].generated_at,
-						prompt: visuals[i].prompt,
-						status: 'completed',
-					});
-					this.generationGateway.emitProgress(generationId, {
-						progress_percent: generation.progress_percent,
-						completed: generation.completed_visuals_count,
-						total: prompts.length,
-						elapsed_seconds: elapsedSeconds,
-						estimated_remaining_seconds: estimatedRemaining,
-					});
+					// Image saved to DB - frontend will poll and see it
 					
 					return { success: true, index: i };
 				} catch (error: any) {
@@ -185,28 +153,7 @@ export class GenerationProcessor {
 					generation.completed_visuals_count = visuals.filter(v => v.status === 'completed').length;
 					await this.generationsRepository.save(generation);
 
-					// Socket.IO: visual failed
-					this.generationGateway.emitVisualCompleted(generationId, {
-						type: visualType,
-						index: i,
-						image_url: '',
-						generated_at: new Date().toISOString(),
-						status: 'failed',
-						error: error?.message || 'Unknown error',
-					});
-					const started = generation.started_at ? new Date(generation.started_at) : new Date();
-					const elapsedSeconds = Math.floor((Date.now() - started.getTime()) / 1000);
-					let estimatedRemaining: number | undefined;
-					if (generation.progress_percent > 0 && generation.progress_percent < 100) {
-						estimatedRemaining = Math.ceil((elapsedSeconds / generation.progress_percent) * (100 - generation.progress_percent));
-					}
-					this.generationGateway.emitProgress(generationId, {
-						progress_percent: generation.progress_percent,
-						completed: generation.completed_visuals_count,
-						total: prompts.length,
-						elapsed_seconds: elapsedSeconds,
-						estimated_remaining_seconds: estimatedRemaining,
-					});
+					// Failed image saved to DB - frontend will poll and see it
 					
 					return { success: false, index: i, error: error?.message };
 				}
@@ -254,22 +201,7 @@ export class GenerationProcessor {
 
 			await this.generationsRepository.save(generation);
 
-			// Socket.IO: generation complete
-			const started = generation.started_at ? new Date(generation.started_at) : new Date();
-			const elapsedSeconds = Math.floor((Date.now() - started.getTime()) / 1000);
-			this.generationGateway.emitProgress(generationId, {
-				progress_percent: 100,
-				completed: completedCount,
-				total: visuals.length,
-				elapsed_seconds: elapsedSeconds,
-				estimated_remaining_seconds: 0,
-			});
-			this.generationGateway.emitComplete(generationId, {
-				status: generation.status === GenerationStatus.COMPLETED ? 'completed' : 'failed',
-				completed: completedCount,
-				total: visuals.length,
-				visuals,
-			});
+			// Generation complete - frontend will poll and see final status
 
 			// Save generated image filenames to product for quick access later
 			if (generation.product_id && completedCount > 0) {
