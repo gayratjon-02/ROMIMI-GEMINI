@@ -465,7 +465,8 @@ export class GenerationsService {
 		const daJSON = generation.collection.analyzed_da_json;
 
 		// Use PromptBuilderService for strict deterministic templates
-		const { prompts, negative_prompt } = this.promptBuilderService.buildPrompts({
+		// Now returns full MergedPrompts format with all shot details
+		const generatedPrompts = this.promptBuilderService.buildPrompts({
 			product: productJSON as AnalyzeProductDirectResponse,
 			da: daJSON as AnalyzeDAPresetResponse,
 			options: {
@@ -473,58 +474,8 @@ export class GenerationsService {
 			}
 		});
 
-		// Map generated prompts to MergedPrompts structure
-		// Each key in GeneratedPrompts matches exactly one key in MergedPrompts
-		// Helper to build common structure
-		const buildMergedPrompt = (
-			type: string,
-			displayName: string,
-			prompt: string,
-			cameraFocus: string
-		) => ({
-			type,
-			display_name: displayName,
-			prompt,
-			negative_prompt: negative_prompt,
-			editable: true,
-			last_edited_at: null,
-			camera: {
-				focal_length_mm: 50,
-				aperture: 2.8,
-				focus: cameraFocus,
-				angle: 'Eye level'
-			},
-			background: {
-				wall: daJSON.background.type,
-				floor: daJSON.floor.type
-			},
-			product_details: {
-				type: productJSON.general_info.product_name,
-				color: productJSON.visual_specs.color_name,
-				fabric: productJSON.visual_specs.fabric_texture
-			},
-			da_elements: {
-				background: daJSON.background.type,
-				props: [...daJSON.props.left_side, ...daJSON.props.right_side].join(', '),
-				mood: daJSON.mood
-			}
-		});
-
-		// Map generated prompts to MergedPrompts structure
-		const mergedPrompts: MergedPrompts = {
-			duo: buildMergedPrompt('duo', 'DUO (Father & Son)', prompts.duo, 'Subject focus'),
-			solo: buildMergedPrompt('solo', 'SOLO (Model)', prompts.solo, 'Subject focus'),
-			flatlay_front: buildMergedPrompt('flatlay_front', 'FLAT LAY FRONT', prompts.flat_lay_front, 'Flat lay'),
-			flatlay_back: buildMergedPrompt('flatlay_back', 'FLAT LAY BACK', prompts.flat_lay_back, 'Flat lay'),
-			closeup_front: {
-				...buildMergedPrompt('closeup_front', 'CLOSE UP FRONT', prompts.close_up_front, 'Macro details'),
-				camera: { focal_length_mm: 100, aperture: 4.0, focus: 'Macro details', angle: 'Close up' }
-			},
-			closeup_back: {
-				...buildMergedPrompt('closeup_back', 'CLOSE UP BACK', prompts.close_up_back, 'Macro details'),
-				camera: { focal_length_mm: 100, aperture: 4.0, focus: 'Macro details', angle: 'Close up' }
-			},
-		};
+		// prompts is already in MergedPrompts format with all camera, background, product_details, da_elements
+		const mergedPrompts: MergedPrompts = generatedPrompts.prompts;
 
 		// Save to generation
 		generation.merged_prompts = mergedPrompts;
