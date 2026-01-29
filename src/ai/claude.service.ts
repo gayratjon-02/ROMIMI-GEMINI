@@ -109,7 +109,10 @@ export class ClaudeService {
 	/**
 	 * Direct product analysis from uploaded images
 	 * Used by POST /api/products/analyze endpoint
-	 * Returns simplified JSON structure for frontend
+	 * Returns comprehensive JSON structure for frontend
+	 *
+	 * Input: Up to 12 images (front + back + reference)
+	 * Output: Single Product JSON with general_info, visual_specs, design_front, design_back, garment_details
 	 */
 	async analyzeProductDirect(input: AnalyzeProductDirectInput): Promise<AnalyzeProductDirectResponse> {
 		// At least one front OR back image is required
@@ -117,7 +120,7 @@ export class ClaudeService {
 			throw new BadRequestException('At least one front or back image is required');
 		}
 
-		// Combine all images for analysis
+		// Combine all images for analysis (order matters for Claude context)
 		const allImages: string[] = [
 			...(input.frontImages || []),
 			...(input.backImages || []),
@@ -127,19 +130,37 @@ export class ClaudeService {
 		let promptText = PRODUCT_ANALYSIS_DIRECT_PROMPT;
 
 		// Add image context to help Claude understand which images are which
-		promptText += '\n\n--- IMAGE CONTEXT ---';
+		promptText += '\n\n═══════════════════════════════════════════════════════════';
+		promptText += '\n📸 IMAGES PROVIDED FOR THIS ANALYSIS';
+		promptText += '\n═══════════════════════════════════════════════════════════';
+
+		let imageIndex = 1;
 		if (input.frontImages?.length) {
-			promptText += `\nFront images: ${input.frontImages.length} image(s)`;
+			promptText += `\n\nFRONT IMAGES (${input.frontImages.length}):`;
+			for (let i = 0; i < input.frontImages.length; i++) {
+				promptText += `\n  Image ${imageIndex}: Front view ${i + 1}`;
+				imageIndex++;
+			}
 		}
 		if (input.backImages?.length) {
-			promptText += `\nBack images: ${input.backImages.length} image(s)`;
+			promptText += `\n\nBACK IMAGES (${input.backImages.length}):`;
+			for (let i = 0; i < input.backImages.length; i++) {
+				promptText += `\n  Image ${imageIndex}: Back view ${i + 1}`;
+				imageIndex++;
+			}
 		}
 		if (input.referenceImages?.length) {
-			promptText += `\nReference images: ${input.referenceImages.length} image(s)`;
+			promptText += `\n\nREFERENCE IMAGES (${input.referenceImages.length}):`;
+			for (let i = 0; i < input.referenceImages.length; i++) {
+				promptText += `\n  Image ${imageIndex}: Reference/detail ${i + 1}`;
+				imageIndex++;
+			}
 		}
 
+		promptText += `\n\nTOTAL: ${allImages.length} images for analysis`;
+
 		if (input.productName) {
-			promptText += `\n\nProduct name hint: ${input.productName}`;
+			promptText += `\n\n🏷️ Product name hint: ${input.productName}`;
 		}
 
 		const content: ClaudeContentBlock[] = [
@@ -149,7 +170,7 @@ export class ClaudeService {
 
 		const response = await this.createMessage({
 			content,
-			max_tokens: 2000,
+			max_tokens: 3000,
 		});
 
 		const text = this.extractText(response.content);
@@ -160,18 +181,40 @@ export class ClaudeService {
 			throw new InternalServerErrorException('Failed to parse product analysis');
 		}
 
-		// Validate and ensure all required fields exist
+		// Validate and ensure all required fields exist with proper structure
 		const result: AnalyzeProductDirectResponse = {
-			product_type: parsed.product_type || 'unknown garment',
-			primary_color: parsed.primary_color || '#000000',
-			material: parsed.material || 'mixed fabric',
-			fit: parsed.fit || 'regular',
-			garment_details: Array.isArray(parsed.garment_details) ? parsed.garment_details : [],
-			logos: {
-				front: parsed.logos?.front || 'none',
-				back: parsed.logos?.back || 'none',
+			general_info: {
+				product_name: parsed.general_info?.product_name || 'UNNAMED PRODUCT',
+				category: parsed.general_info?.category || 'Apparel',
+				fit_type: parsed.general_info?.fit_type || 'Regular fit',
+				gender_target: parsed.general_info?.gender_target || 'Unisex',
 			},
-			visual_priorities: Array.isArray(parsed.visual_priorities) ? parsed.visual_priorities : [],
+			visual_specs: {
+				color_name: parsed.visual_specs?.color_name || 'BLACK',
+				hex_code: parsed.visual_specs?.hex_code || '#000000',
+				fabric_texture: parsed.visual_specs?.fabric_texture || 'Cotton blend fabric',
+			},
+			design_front: {
+				has_logo: parsed.design_front?.has_logo ?? false,
+				logo_text: parsed.design_front?.logo_text || '',
+				logo_type: parsed.design_front?.logo_type || '',
+				logo_color: parsed.design_front?.logo_color || '',
+				placement: parsed.design_front?.placement || '',
+				description: parsed.design_front?.description || 'Clean front design',
+			},
+			design_back: {
+				has_logo: parsed.design_back?.has_logo ?? false,
+				has_patch: parsed.design_back?.has_patch ?? false,
+				description: parsed.design_back?.description || 'Clean back design',
+				patch_color: parsed.design_back?.patch_color || '',
+				patch_detail: parsed.design_back?.patch_detail || '',
+			},
+			garment_details: {
+				pockets: parsed.garment_details?.pockets || 'Standard pockets',
+				sleeves: parsed.garment_details?.sleeves || 'Standard sleeves',
+				bottom: parsed.garment_details?.bottom || 'Standard hem',
+				neckline: parsed.garment_details?.neckline || 'Standard neckline',
+			},
 		};
 
 		return result;
