@@ -148,11 +148,23 @@ Har bir yangi yoki o‘zgargan endpoint uchun yuqoridagi struktura saqlanadi. Mi
 | 51 | POST | `/api/ad-recreation/:id/generate` | JWT | Variatsiyalar generatsiya |
 | 52 | POST | `/api/ad-recreation/deleteAdRecreation/:id` | JWT | O‘chirish |
 
-### 2.10 SSE (ixtiyoriy)
+### 2.10 DA (Art Direction) — Phase 2
 
 | # | Method | Endpoint | Auth | Tavsif |
 |---|--------|----------|------|--------|
-| 53 | GET | `/api/generations/:id/stream?token=<JWT>` | Query token | SSE progress |
+| 53 | POST | `/api/da/analyze` | JWT | **DA Reference Analysis** (FormData: image) — Claude AI |
+| 54 | GET | `/api/da/presets` | JWT | Barcha DA Presets (system + user) |
+| 55 | GET | `/api/da/presets/defaults` | — | Faqat system presets (public) |
+| 56 | GET | `/api/da/presets/:id` | JWT | Bitta preset (ID bo'yicha) |
+| 57 | GET | `/api/da/presets/code/:code` | — | Bitta preset (code bo'yicha, public) |
+| 58 | POST | `/api/da/presets` | JWT | Analyzed result'ni preset sifatida saqlash |
+| 59 | POST | `/api/da/presets/delete/:id` | JWT | User preset o'chirish (system emas) |
+
+### 2.11 SSE (ixtiyoriy)
+
+| # | Method | Endpoint | Auth | Tavsif |
+|---|--------|----------|------|--------|
+| 60 | GET | `/api/generations/:id/stream?token=<JWT>` | Query token | SSE progress |
 
 ---
 
@@ -923,7 +935,184 @@ Har bir yangi yoki o‘zgargan endpoint uchun yuqoridagi struktura saqlanadi. Mi
 
 ---
 
-## 4. Database jadval va API o‘zgarishlari xulosa
+### 3.26 POST `/api/da/analyze` — DA Reference Analysis (JWT, FormData)
+
+**🎨 PHASE 2: Art Direction Reference Analysis**
+
+Bu endpoint reference rasmni Claude AI orqali tahlil qilib, DAPreset JSON strukturasiga aylantiradi.
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{baseUrl}}/da/analyze`
+- **Headers:** `Authorization: Bearer {{access_token}}`. Content-Type qo'ymang.
+- **Body:** **form-data**
+
+| Key | Type | Required | Tavsif |
+|-----|------|----------|--------|
+| `image` | File | ✅ | Reference rasm (room/scene photo) |
+| `preset_name` | Text | ❌ | Custom nom (default: "Analyzed Reference") |
+
+---
+
+#### Postmanda qanday test qilish
+
+1. **Request yaratish**
+   - **Method** = `POST`, **URL** = `{{baseUrl}}/da/analyze`
+   - **Authorization** tab: Bearer Token
+
+2. **Body ni to'ldirish**
+   - **Body** tab → **form-data**
+   - `image` → File → Reference rasm tanlang
+   - `preset_name` → Text → "My Custom Room" (ixtiyoriy)
+
+3. **Send** bosing. Claude AI 5-15 sekund tahlil qiladi.
+
+---
+
+#### Kutiladigan javob (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "da_name": "Analyzed Reference",
+    "background": {
+      "type": "Dark walnut wood panel",
+      "hex": "#5D4037"
+    },
+    "floor": {
+      "type": "Light grey polished concrete",
+      "hex": "#A9A9A9"
+    },
+    "props": {
+      "left_side": ["Vintage book stack", "Yellow mushroom lamp", "Die-cast vintage cars"],
+      "right_side": ["Vintage book stack", "Retro robot toy", "Rainbow stacking rings"]
+    },
+    "styling": {
+      "pants": "Black chino (#1A1A1A)",
+      "footwear": "BAREFOOT"
+    },
+    "lighting": {
+      "type": "Soft diffused studio",
+      "temperature": "4500K warm neutral"
+    },
+    "mood": "Nostalgic warmth, premium casual, father-son connection",
+    "quality": "8K editorial Vogue-level"
+  },
+  "message": "DA reference analyzed successfully. Use POST /api/da/presets to save as a preset."
+}
+```
+
+**DB ta'siri:** Hech narsa saqlanmaydi. Faqat tahlil qaytariladi.
+
+---
+
+### 3.27 GET `/api/da/presets` — Barcha DA Presets (JWT)
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{baseUrl}}/da/presets`
+- **Headers:** `Authorization: Bearer {{access_token}}`
+
+**Kutiladigan javob (200):**
+
+```json
+{
+  "total": 5,
+  "system_presets": 4,
+  "user_presets": 1,
+  "presets": [
+    {
+      "id": "uuid",
+      "name": "Nostalgic Playroom",
+      "code": "nostalgic_playroom",
+      "is_default": true,
+      "background_type": "Dark walnut wood panel",
+      "background_hex": "#5D4037",
+      "...": "..."
+    }
+  ]
+}
+```
+
+---
+
+### 3.28 GET `/api/da/presets/defaults` — System Presets (Public)
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{baseUrl}}/da/presets/defaults`
+- **Headers:** Yo'q (public)
+
+**Kutiladigan javob (200):** System preset array (is_default=true).
+
+---
+
+### 3.29 POST `/api/da/presets` — Save Analyzed Result as Preset (JWT)
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{baseUrl}}/da/presets`
+- **Headers:** `Content-Type: application/json`, `Authorization: Bearer {{access_token}}`
+- **Body (raw JSON):**
+
+```json
+{
+  "analysis": {
+    "da_name": "My Custom Room",
+    "background": { "type": "...", "hex": "#..." },
+    "floor": { "type": "...", "hex": "#..." },
+    "props": { "left_side": [...], "right_side": [...] },
+    "styling": { "pants": "...", "footwear": "..." },
+    "lighting": { "type": "...", "temperature": "..." },
+    "mood": "...",
+    "quality": "8K editorial Vogue-level"
+  },
+  "code": "my_custom_room",
+  "description": "My custom analyzed room preset"
+}
+```
+
+**Kutiladigan javob (201):**
+
+```json
+{
+  "success": true,
+  "preset": {
+    "id": "uuid",
+    "name": "My Custom Room",
+    "code": "my_custom_room",
+    "is_default": false,
+    "..."
+  },
+  "message": "DA Preset \"My Custom Room\" saved successfully"
+}
+```
+
+**DB:** `da_presets` jadvaliga yangi qator qo'shiladi.
+
+---
+
+### 3.30 POST `/api/da/presets/delete/:id` — Delete User Preset (JWT)
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{baseUrl}}/da/presets/delete/{{preset_id}}`
+- **Headers:** `Authorization: Bearer {{access_token}}`
+
+**Kutiladigan javob (200):**
+
+```json
+{
+  "message": "DA Preset \"My Custom Room\" deleted successfully"
+}
+```
+
+**Muhim:** System presets (is_default=true) o'chirilmaydi!
+
+---
+
+## 4. Database jadval va API o'zgarishlari xulosa
 
 | Jadval | Qaysi API lar yozadi |
 |--------|----------------------|
@@ -933,6 +1122,7 @@ Har bir yangi yoki o‘zgargan endpoint uchun yuqoridagi struktura saqlanadi. Mi
 | `products` | `POST /products` (yangi), `updateProduct`, `deleteProduct`, `:id/analyze`, `updateProductJson`; generatsiya tugagach `generated_images` processor tomonidan yangilanadi |
 | `generations` | `POST /generations/createGeneration`, `:id/merge`, `updateMergedPrompts`, `:id/generate` (queue orqali), `reset/:id`; processor `visuals`, `status`, `progress_percent`, `completed_visuals_count`, `started_at`, `completed_at` ni yangilaydi |
 | `ad_recreations` | `POST /ad-recreation`, `:id/analyze`, `:id/generate`, `deleteAdRecreation/:id` |
+| `da_presets` | `POST /da/presets` (yangi preset saqlash), `POST /da/presets/delete/:id` (user preset o'chirish) |
 
 ---
 

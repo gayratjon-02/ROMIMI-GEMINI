@@ -18,6 +18,7 @@ import { ProductsModule } from './products/products.module';
 import { AiModule } from './ai/ai.module';
 import { GenerationsModule } from './generations/generations.module';
 import { AdRecreationModule } from './ad-recreation/ad-recreation.module';
+import { DAModule } from './da/da.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AppController } from './app.controller';
@@ -50,6 +51,7 @@ import { AppService } from './app.service';
 		AiModule,
 		GenerationsModule,
 		AdRecreationModule,
+		DAModule,
 	],
 	controllers: [AppController],
 	providers: [

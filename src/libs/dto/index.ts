@@ -39,3 +39,6 @@ export * from './generate-variations.dto';
 
 // File Upload DTOs
 export * from './upload-file.dto';
+
+// DA (Art Direction) DTOs
+export * from './analyze-da-preset.dto';

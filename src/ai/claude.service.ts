@@ -12,10 +12,12 @@ import { PRODUCT_ANALYSIS_PROMPT } from './prompts/product-analysis.prompt';
 import { DA_ANALYSIS_PROMPT } from './prompts/da-analysis.prompt';
 import { MERGE_PROMPT_TEMPLATE } from './prompts/merge-prompt.prompt';
 import { PRODUCT_ANALYSIS_DIRECT_PROMPT } from './prompts/product-analysis-direct.prompt';
+import { DA_REFERENCE_ANALYSIS_PROMPT } from './prompts/da-reference-analysis.prompt';
 import { AnalyzedProductJSON } from '../common/interfaces/product-json.interface';
 import { AnalyzedDAJSON } from '../common/interfaces/da-json.interface';
 import { MergedPrompts } from '../common/interfaces/merged-prompts.interface';
 import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct.dto';
+import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
 
 type AnalyzeProductDirectInput = {
 	frontImages?: string[];
@@ -253,6 +255,98 @@ export class ClaudeService {
 		};
 
 		return result;
+	}
+
+	/**
+	 * Analyze DA Reference image and return DAPreset-compatible JSON
+	 * Used by POST /api/da/analyze endpoint
+	 *
+	 * This method reverse-engineers a reference image into a structured
+	 * DAPreset format that can be saved to the database or used for generation.
+	 *
+	 * @param imageUrl - URL or path to the reference image
+	 * @param presetName - Optional custom name for the preset
+	 * @returns AnalyzeDAPresetResponse - Structured DA preset data
+	 */
+	async analyzeDAForPreset(imageUrl: string, presetName?: string): Promise<AnalyzeDAPresetResponse> {
+		if (!imageUrl) {
+			throw new BadRequestException(FileMessage.FILE_NOT_FOUND);
+		}
+
+		this.logger.log('🎨 Analyzing DA reference image for preset extraction...');
+
+		const content: ClaudeContentBlock[] = [
+			{ type: 'text', text: DA_REFERENCE_ANALYSIS_PROMPT },
+			...(await this.buildImageBlocks([imageUrl])),
+		];
+
+		const response = await this.createMessage({
+			content,
+			max_tokens: 3000,
+		});
+
+		const text = this.extractText(response.content);
+		const parsed = this.parseJson(text);
+
+		if (!parsed) {
+			this.logger.error('Failed to parse DA preset analysis JSON', { text });
+			throw new InternalServerErrorException('Failed to parse DA reference analysis');
+		}
+
+		// Validate and ensure all required fields exist with proper structure
+		const result: AnalyzeDAPresetResponse = {
+			da_name: presetName || parsed.da_name || 'Analyzed Reference',
+			background: {
+				type: parsed.background?.type || 'Neutral background',
+				hex: this.validateHexColor(parsed.background?.hex) || '#808080',
+			},
+			floor: {
+				type: parsed.floor?.type || 'Neutral floor',
+				hex: this.validateHexColor(parsed.floor?.hex) || '#A9A9A9',
+			},
+			props: {
+				left_side: Array.isArray(parsed.props?.left_side) ? parsed.props.left_side : [],
+				right_side: Array.isArray(parsed.props?.right_side) ? parsed.props.right_side : [],
+			},
+			styling: {
+				pants: parsed.styling?.pants || 'Black trousers (#1A1A1A)',
+				footwear: parsed.styling?.footwear || 'BAREFOOT',
+			},
+			lighting: {
+				type: parsed.lighting?.type || 'Soft diffused studio lighting',
+				temperature: parsed.lighting?.temperature || '5000K neutral',
+			},
+			mood: parsed.mood || 'Professional, clean, product-focused',
+			quality: parsed.quality || '8K editorial Vogue-level',
+		};
+
+		this.logger.log('✅ DA Reference analysis complete');
+
+		return result;
+	}
+
+	/**
+	 * Validate and normalize HEX color code
+	 * Returns null if invalid, otherwise returns properly formatted #XXXXXX
+	 */
+	private validateHexColor(hex: string | undefined): string | null {
+		if (!hex) return null;
+
+		// Remove # if present and validate
+		const cleanHex = hex.replace('#', '').toUpperCase();
+
+		// Check if valid 6-character hex
+		if (/^[0-9A-F]{6}$/.test(cleanHex)) {
+			return `#${cleanHex}`;
+		}
+
+		// Check if valid 3-character hex, expand to 6
+		if (/^[0-9A-F]{3}$/.test(cleanHex)) {
+			const expanded = cleanHex.split('').map(c => c + c).join('');
+			return `#${expanded}`;
+		}
+
+		return null;
 	}
 
 	async mergeProductAndDA(
