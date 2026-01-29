@@ -61,9 +61,13 @@ export class ClaudeService {
 
 	private client: Anthropic | null = null;
 
-	private readonly model = 'claude-sonnet-4-20250514';
+	private readonly model: string;
 
-	constructor(private readonly configService: ConfigService) { }
+	constructor(private readonly configService: ConfigService) {
+		// Read model from .env, fallback to claude-sonnet-4-20250514
+		this.model = this.configService.get<string>('CLAUDE_MODEL') || 'claude-sonnet-4-20250514';
+		this.logger.log(`🤖 Claude model initialized: ${this.model}`);
+	}
 
 	async analyzeProduct(input: AnalyzeProductInput): Promise<AnalyzedProductJSON> {
 		if (!input.images?.length) {
