@@ -77,59 +77,75 @@ export class DAService {
 	}
 
 	/**
-	 * 🛡️ Brand Rules Post-Processing
+	 * 🛡️ AGGRESSIVE DATA NORMALIZATION
 	 * 
-	 * Ensures AI output conforms to strict schema and business rules.
-	 * This is a safety net AFTER Claude returns JSON.
+	 * This is a forceful safety net that runs AFTER Claude returns JSON.
+	 * DO NOT rely on AI to get the schema right. This function FIXES the data.
 	 * 
 	 * RULES:
-	 * 1. Props must have left_side/right_side arrays (not items/placement)
-	 * 2. Indoor scenes force BAREFOOT styling
+	 * 1. Props MUST have left_side/right_side arrays (delete items/placement/style)
+	 * 2. Indoor scenes ALWAYS force BAREFOOT (override all footwear keys)
 	 * 3. Default pants to brand standard if missing
 	 */
 	private applyBrandRules(daJson: AnalyzeDAPresetResponse): AnalyzeDAPresetResponse {
-		this.logger.log('🛡️ Applying Brand Rules post-processing...');
+		this.logger.log('🛡️ Running AGGRESSIVE Data Normalization...');
 
 		// ═══════════════════════════════════════════════════════════
-		// RULE 1: Normalize Props to left_side / right_side
+		// RULE 1: FORCE PROPS STRUCTURE (left_side / right_side)
 		// ═══════════════════════════════════════════════════════════
 		const rawProps = daJson.props as any;
 
-		// If AI returned 'items' array instead of left/right, split it
-		if (rawProps?.items && Array.isArray(rawProps.items)) {
-			this.logger.warn('⚠️ AI returned "items" array - normalizing to left_side/right_side');
-			const items = rawProps.items;
+		// Check if correct structure is missing
+		const hasLeftSide = Array.isArray(rawProps?.left_side);
+		const hasRightSide = Array.isArray(rawProps?.right_side);
+
+		if (!hasLeftSide || !hasRightSide) {
+			this.logger.warn('⚠️ AI returned incorrect props structure - FORCING normalization');
+
+			// Try to salvage from 'items' array
+			const items = rawProps?.items || [];
 			const midpoint = Math.ceil(items.length / 2);
+
 			daJson.props = {
-				left_side: items.slice(0, midpoint),
-				right_side: items.slice(midpoint),
+				left_side: hasLeftSide ? rawProps.left_side : items.slice(0, midpoint),
+				right_side: hasRightSide ? rawProps.right_side : items.slice(midpoint),
 			};
 		}
 
-		// Ensure arrays exist
-		if (!Array.isArray(daJson.props?.left_side)) {
-			daJson.props.left_side = [];
-		}
-		if (!Array.isArray(daJson.props?.right_side)) {
-			daJson.props.right_side = [];
-		}
+		// CLEANUP: Remove any invalid keys that AI might have added
+		const cleanProps = daJson.props as any;
+		delete cleanProps.items;
+		delete cleanProps.placement;
+		delete cleanProps.style;
 
 		// ═══════════════════════════════════════════════════════════
-		// RULE 2: The Barefoot Rule (Indoor scenes)
+		// RULE 2: FORCE BAREFOOT (Indoor Scene Detection)
 		// ═══════════════════════════════════════════════════════════
-		const backgroundJson = JSON.stringify(daJson.background || {}).toLowerCase();
-		const moodJson = (daJson.mood || '').toLowerCase();
 
-		// Detect indoor environment
-		const indoorKeywords = /room|home|indoor|wall|floor|studio|bedroom|living|office|plaster|interior|apartment/i;
-		const isIndoor = indoorKeywords.test(backgroundJson) || indoorKeywords.test(moodJson);
+		// Build context string from background, floor, and mood
+		const backgroundStr = JSON.stringify(daJson.background || {}).toLowerCase();
+		const floorStr = JSON.stringify(daJson.floor || {}).toLowerCase();
+		const moodStr = (daJson.mood || '').toLowerCase();
+		const contextStr = backgroundStr + floorStr + moodStr;
+
+		// Expanded indoor detection keywords
+		const indoorKeywords = /room|home|indoor|wall|floor|studio|bedroom|living|office|plaster|interior|apartment|wood|panel|shelf|grain|texture|parquet|laminate|tile|carpet|rug/i;
+		const isIndoor = indoorKeywords.test(contextStr);
+
+		// Defensive: Ensure styling object exists
+		if (!daJson.styling) {
+			daJson.styling = { pants: '', footwear: '' };
+		}
 
 		if (isIndoor) {
 			const currentFootwear = (daJson.styling?.footwear || '').toLowerCase();
 			if (currentFootwear !== 'barefoot') {
-				this.logger.warn(`⚠️ Indoor scene detected but footwear was "${daJson.styling.footwear}" - forcing BAREFOOT`);
-				daJson.styling.footwear = 'BAREFOOT';
+				this.logger.warn(`⚠️ INDOOR DETECTED: Overriding footwear "${daJson.styling.footwear}" → BAREFOOT`);
 			}
+			// FORCE BAREFOOT - overwrite ALL footwear-related keys
+			daJson.styling.footwear = 'BAREFOOT';
+			(daJson.styling as any).feet = 'BAREFOOT';
+			(daJson.styling as any).shoes = 'BAREFOOT';
 		}
 
 		// ═══════════════════════════════════════════════════════════
@@ -139,7 +155,10 @@ export class DAService {
 			daJson.styling.pants = 'Black chino pants (#1A1A1A)';
 		}
 
-		this.logger.log('✅ Brand Rules applied successfully');
+		this.logger.log('✅ Aggressive normalization complete');
+		this.logger.log(`   Props: left_side=${daJson.props.left_side.length}, right_side=${daJson.props.right_side.length}`);
+		this.logger.log(`   Footwear: ${daJson.styling.footwear}`);
+
 		return daJson;
 	}
 
