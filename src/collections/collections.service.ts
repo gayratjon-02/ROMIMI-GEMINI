@@ -214,9 +214,12 @@ export class CollectionsService {
 		}
 
 		// PRIMARY: Analyze with Claude AI
-		const analyzedDAJSON = await this.claudeService.analyzeDAReference(
+		let analyzedDAJSON = await this.claudeService.analyzeDAReference(
 			collection.da_reference_image_url
 		);
+
+		// 🛡️ CRITICAL: Apply brand rules normalization
+		analyzedDAJSON = this.applyBrandRules(analyzedDAJSON);
 
 		// Auto-generate fixed_elements from analyzed DA
 		const fixedElements = this.generateFixedElementsFromDA(analyzedDAJSON);
@@ -226,7 +229,84 @@ export class CollectionsService {
 		collection.fixed_elements = fixedElements;
 		await this.collectionsRepository.save(collection);
 
+		console.log('🔍 Final DA JSON being returned:', JSON.stringify(analyzedDAJSON, null, 2));
+
 		return analyzedDAJSON;
+	}
+
+	/**
+	 * 🛡️ AGGRESSIVE DATA NORMALIZATION
+	 * 
+	 * Ensures AI output conforms to strict schema and business rules.
+	 * This is a forceful safety net that runs AFTER Claude returns JSON.
+	 */
+	private applyBrandRules(daJson: AnalyzedDAJSON): AnalyzedDAJSON {
+		console.log('🛡️ CollectionsService: Running AGGRESSIVE Data Normalization...');
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 1: FORCE PROPS STRUCTURE (left_side / right_side)
+		// ═══════════════════════════════════════════════════════════
+		const rawProps = daJson.props as any;
+
+		// Check if correct structure is missing
+		const hasLeftSide = Array.isArray(rawProps?.left_side);
+		const hasRightSide = Array.isArray(rawProps?.right_side);
+
+		if (!hasLeftSide || !hasRightSide) {
+			console.log('⚠️ AI returned incorrect props structure - FORCING normalization');
+
+			// Try to salvage from 'items' array
+			const items = rawProps?.items || [];
+			const midpoint = Math.ceil(items.length / 2);
+
+			(daJson as any).props = {
+				left_side: hasLeftSide ? rawProps.left_side : items.slice(0, midpoint),
+				right_side: hasRightSide ? rawProps.right_side : items.slice(midpoint),
+			};
+		}
+
+		// CLEANUP: Remove any invalid keys that AI might have added
+		const cleanProps = (daJson as any).props;
+		delete cleanProps.items;
+		delete cleanProps.placement;
+		delete cleanProps.style;
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 2: FORCE BAREFOOT (Indoor Scene Detection)
+		// ═══════════════════════════════════════════════════════════
+		const backgroundStr = JSON.stringify(daJson.background || {}).toLowerCase();
+		const moodStr = (daJson.mood || '').toLowerCase();
+		const contextStr = backgroundStr + moodStr;
+
+		// Expanded indoor detection keywords
+		const indoorKeywords = /room|home|indoor|wall|floor|studio|bedroom|living|office|plaster|interior|apartment|wood|panel|shelf|grain|texture|parquet|laminate|tile|carpet|rug/i;
+		const isIndoor = indoorKeywords.test(contextStr);
+
+		// Defensive: Ensure styling object exists
+		if (!daJson.styling) {
+			(daJson as any).styling = { bottom: '', feet: '' };
+		}
+
+		if (isIndoor) {
+			console.log(`⚠️ INDOOR DETECTED: Overriding footwear to BAREFOOT`);
+			// FORCE BAREFOOT - overwrite ALL footwear-related keys
+			(daJson.styling as any).feet = 'BAREFOOT';
+			(daJson.styling as any).footwear = 'BAREFOOT';
+			(daJson.styling as any).shoes = 'BAREFOOT';
+		}
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 3: Default Pants (Brand Standard)
+		// ═══════════════════════════════════════════════════════════
+		if (!daJson.styling?.bottom) {
+			(daJson.styling as any).bottom = 'Black chino pants (#1A1A1A)';
+		}
+
+		console.log('✅ CollectionsService: Normalization complete');
+		console.log(`   Props: left_side=${(daJson as any).props.left_side?.length || 0}, right_side=${(daJson as any).props.right_side?.length || 0}`);
+		console.log(`   Footwear: ${(daJson.styling as any).feet || (daJson.styling as any).footwear}`);
+
+		return daJson;
 	}
 
 	/**
