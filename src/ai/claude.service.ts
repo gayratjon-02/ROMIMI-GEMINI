@@ -686,6 +686,11 @@ Generate the 6 merged prompts now. Return ONLY valid JSON object with the struct
 		};
 	}
 
+	/** Current Claude model (Product & DA analysis) */
+	getModel(): string {
+		return this.model;
+	}
+
 	private async createMessage(params: {
 		content: ClaudeContentBlock[];
 		max_tokens: number;

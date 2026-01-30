@@ -95,6 +95,18 @@ export class GenerationGateway implements OnGatewayConnection, OnGatewayDisconne
 		}
 	}
 
+	/** Visual started processing – show loading state on card */
+	emitVisualProcessing(
+		generationId: string,
+		payload: {
+			type: string;
+			index: number;
+			status: 'processing';
+		},
+	) {
+		this.emitToGeneration(generationId, 'visual_processing', payload);
+	}
+
 	/** Visual completed – real-time card update */
 	emitVisualCompleted(
 		generationId: string,

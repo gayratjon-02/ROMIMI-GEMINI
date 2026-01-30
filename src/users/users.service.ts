@@ -30,6 +30,8 @@ export class UsersService {
 				'api_key_openai',
 				'api_key_anthropic',
 				'api_key_gemini',
+				'claude_model',
+				'gemini_model',
 				'language',
 				'theme',
 				'notifications_enabled',
@@ -62,6 +64,8 @@ export class UsersService {
 				'api_key_openai',
 				'api_key_anthropic',
 				'api_key_gemini',
+				'claude_model',
+				'gemini_model',
 				'language',
 				'theme',
 				'notifications_enabled',
@@ -150,10 +154,12 @@ export class UsersService {
 		api_key_openai: string | null;
 		api_key_anthropic: string | null;
 		api_key_gemini: string | null;
+		claude_model: string | null;
+		gemini_model: string | null;
 	}> {
 		const user = await this.usersRepository.findOne({
 			where: { id },
-			select: ['api_key_openai', 'api_key_anthropic', 'api_key_gemini'],
+			select: ['api_key_openai', 'api_key_anthropic', 'api_key_gemini', 'claude_model', 'gemini_model'],
 		});
 
 		if (!user) {
@@ -164,6 +170,8 @@ export class UsersService {
 			api_key_openai: user.api_key_openai || null,
 			api_key_anthropic: user.api_key_anthropic || null,
 			api_key_gemini: user.api_key_gemini || null,
+			claude_model: user.claude_model || null,
+			gemini_model: user.gemini_model || null,
 		};
 	}
 }

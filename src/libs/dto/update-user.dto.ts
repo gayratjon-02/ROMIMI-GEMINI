@@ -28,6 +28,14 @@ export class UpdateUserDto {
 
 	@IsString()
 	@IsOptional()
+	claude_model?: string;
+
+	@IsString()
+	@IsOptional()
+	gemini_model?: string;
+
+	@IsString()
+	@IsOptional()
 	language?: string;
 
 	@IsString()

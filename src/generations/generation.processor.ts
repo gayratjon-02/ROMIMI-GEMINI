@@ -22,6 +22,7 @@ export interface GenerationJobData {
 @Processor('generation')
 export class GenerationProcessor {
 	private readonly logger = new Logger(GenerationProcessor.name);
+	private progressIntervals: Map<string, NodeJS.Timeout> = new Map();
 
 	constructor(
 		@InjectRepository(Generation)
@@ -33,6 +34,50 @@ export class GenerationProcessor {
 		private readonly filesService: FilesService,
 		private readonly generationGateway: GenerationGateway,
 	) { }
+
+	/**
+	 * Start periodic progress updates every 2 seconds
+	 */
+	private startProgressInterval(generationId: string, startTime: Date, totalVisuals: number, getCompletedCount: () => number) {
+		// Clear any existing interval
+		this.stopProgressInterval(generationId);
+
+		const interval = setInterval(() => {
+			const elapsedMs = Date.now() - startTime.getTime();
+			const elapsedSeconds = Math.floor(elapsedMs / 1000);
+			const completed = getCompletedCount();
+			const progressPercent = Math.round((completed / totalVisuals) * 100);
+
+			// Calculate estimated remaining time based on average completion rate
+			let estimatedRemaining: number | undefined;
+			if (completed > 0) {
+				const avgTimePerVisual = elapsedMs / completed;
+				const remaining = totalVisuals - completed;
+				estimatedRemaining = Math.ceil((remaining * avgTimePerVisual) / 1000);
+			}
+
+			this.generationGateway.emitProgress(generationId, {
+				progress_percent: progressPercent,
+				completed,
+				total: totalVisuals,
+				elapsed_seconds: elapsedSeconds,
+				estimated_remaining_seconds: estimatedRemaining,
+			});
+		}, 2000);
+
+		this.progressIntervals.set(generationId, interval);
+	}
+
+	/**
+	 * Stop progress interval for a generation
+	 */
+	private stopProgressInterval(generationId: string) {
+		const interval = this.progressIntervals.get(generationId);
+		if (interval) {
+			clearInterval(interval);
+			this.progressIntervals.delete(generationId);
+		}
+	}
 
 	@Process()
 	async processGeneration(job: Job<GenerationJobData>): Promise<void> {
@@ -81,7 +126,18 @@ export class GenerationProcessor {
 			generation.visuals = visuals;
 			await this.generationsRepository.save(generation);
 
-			// Generation started - frontend will poll for updates
+			// Start progress interval for real-time updates
+			const generationStartTime = generation.started_at || new Date();
+			let completedCount = 0;
+			this.startProgressInterval(generationId, generationStartTime, prompts.length, () => completedCount);
+
+			// Emit initial progress (0%)
+			this.generationGateway.emitProgress(generationId, {
+				progress_percent: 0,
+				completed: 0,
+				total: prompts.length,
+				elapsed_seconds: 0,
+			});
 
 			const geminiModel = model || process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 
@@ -89,6 +145,13 @@ export class GenerationProcessor {
 			const imagePromises = prompts.map(async (prompt, i) => {
 				const visualType = visuals[i]?.type || `visual_${i}`;
 				this.logger.log(`🎨 [${i + 1}/${prompts.length}] Starting ${visualType}...`);
+
+				// Emit visual_processing event so frontend shows "Generating..." state
+				this.generationGateway.emitVisualProcessing(generationId, {
+					type: visualType,
+					index: i,
+					status: 'processing',
+				});
 
 				// Enhance prompt based on shot type (duo/solo get photorealistic human injection)
 				const enhancedPrompt = PromptBuilder.enhanceForShotType(prompt, visualType);
@@ -135,6 +198,13 @@ export class GenerationProcessor {
 
 					this.logger.log(`✅ [${i + 1}/${prompts.length}] ${visualType} completed!`);
 
+					// Update completed count for progress interval
+					completedCount++;
+
+					// Calculate elapsed time
+					const elapsedMs = Date.now() - generationStartTime.getTime();
+					const elapsedSeconds = Math.floor(elapsedMs / 1000);
+
 					// Emit event
 					this.generationGateway.emitVisualCompleted(generationId, {
 						type: visualType,
@@ -152,11 +222,17 @@ export class GenerationProcessor {
 					await this.generationsRepository.save(generation);
 					job.progress(generation.progress_percent);
 
+					// Calculate estimated remaining time
+					const avgTimePerVisual = elapsedMs / completed;
+					const remainingVisuals = prompts.length - completed;
+					const estimatedRemaining = Math.ceil((remainingVisuals * avgTimePerVisual) / 1000);
+
 					this.generationGateway.emitProgress(generationId, {
 						progress_percent: generation.progress_percent,
 						completed: generation.completed_visuals_count,
 						total: prompts.length,
-						elapsed_seconds: 0, // Calculate if needed
+						elapsed_seconds: elapsedSeconds,
+						estimated_remaining_seconds: estimatedRemaining,
 					});
 
 					// Image saved to DB - frontend will poll and see it
@@ -164,6 +240,9 @@ export class GenerationProcessor {
 					return { success: true, index: i };
 				} catch (error: any) {
 					this.logger.error(`❌ [${i + 1}/${prompts.length}] ${visualType} failed: ${error?.message}`);
+
+					// Update completed count for progress interval (failed also counts as processed)
+					completedCount++;
 
 					visuals[i] = {
 						...visuals[i],
@@ -179,7 +258,17 @@ export class GenerationProcessor {
 					generation.completed_visuals_count = visuals.filter(v => v.status === 'completed').length;
 					await this.generationsRepository.save(generation);
 
-					// Failed image saved to DB - frontend will poll and see it
+					// Calculate elapsed time
+					const elapsedMs = Date.now() - generationStartTime.getTime();
+					const elapsedSeconds = Math.floor(elapsedMs / 1000);
+
+					// Emit progress with failed visual counted
+					this.generationGateway.emitProgress(generationId, {
+						progress_percent: generation.progress_percent,
+						completed: completed,
+						total: prompts.length,
+						elapsed_seconds: elapsedSeconds,
+					});
 
 					this.generationGateway.emitVisualCompleted(generationId, {
 						type: visualType,
@@ -198,6 +287,9 @@ export class GenerationProcessor {
 			// Wait for all to complete
 			await Promise.allSettled(imagePromises);
 
+			// Stop progress interval
+			this.stopProgressInterval(generationId);
+
 			job.progress(100);
 
 			// Check final results after sequential processing is complete
@@ -206,10 +298,10 @@ export class GenerationProcessor {
 			const allCompleted = visuals.every((v) => v.status === 'completed');
 			const allFailed = visuals.every((v) => v.status === 'failed');
 			const anyFailed = visuals.some((v) => v.status === 'failed');
-			const completedCount = visuals.filter((v) => v.status === 'completed').length;
+			const finalCompletedCount = visuals.filter((v) => v.status === 'completed').length;
 			const failedCount = visuals.filter((v) => v.status === 'failed').length;
 
-			this.logger.log(`📊 Final results: ${completedCount} completed, ${failedCount} failed out of ${visuals.length} total`);
+			this.logger.log(`📊 Final results: ${finalCompletedCount} completed, ${failedCount} failed out of ${visuals.length} total`);
 
 			// Status logic per spec:
 			// if all failed → failed
@@ -279,6 +371,9 @@ export class GenerationProcessor {
 			}
 		} catch (error) {
 			this.logger.error(`Generation ${generationId} failed: ${error.message}`, error.stack);
+
+			// Stop progress interval on error
+			this.stopProgressInterval(generationId);
 
 			// Update generation status to failed
 			const generation = await this.generationsRepository.findOne({

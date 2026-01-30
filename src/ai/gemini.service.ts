@@ -685,4 +685,9 @@ Aspect ratio: ${ratioText}. Resolution: ${resolutionText}.`;
 			systemKeyMasked: apiKey ? `${apiKey.substring(0, 10)}****${apiKey.substring(apiKey.length - 4)}` : null,
 		};
 	}
+
+	/** Current Gemini model (image generation) */
+	getModel(): string {
+		return this.MODEL;
+	}
 }

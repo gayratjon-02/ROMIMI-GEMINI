@@ -52,26 +52,28 @@ export class UsersController {
 
 	@Get('getApiKeyStatus')
 	async getApiKeyStatus(@CurrentUser() user: User): Promise<{
-		anthropic: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string };
-		gemini: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string };
+		anthropic: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string; model: string };
+		gemini: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string; model: string };
 	}> {
-		// Get user's API keys from database
 		const userSettings = await this.usersService.getUserApiKeys(user.id);
-
-		// Get system API key status
 		const anthropicStatus = this.claudeService.getApiKeyStatus();
 		const geminiStatus = this.geminiService.getApiKeyStatus();
+
+		const anthropicModel = userSettings.claude_model || this.claudeService.getModel();
+		const geminiModel = userSettings.gemini_model || this.geminiService.getModel();
 
 		return {
 			anthropic: {
 				hasSystemKey: anthropicStatus.hasSystemKey,
 				hasUserKey: !!userSettings.api_key_anthropic,
 				activeSource: userSettings.api_key_anthropic ? 'user' : (anthropicStatus.hasSystemKey ? 'system' : 'none'),
+				model: anthropicModel,
 			},
 			gemini: {
 				hasSystemKey: geminiStatus.hasSystemKey,
 				hasUserKey: !!userSettings.api_key_gemini,
 				activeSource: userSettings.api_key_gemini ? 'user' : (geminiStatus.hasSystemKey ? 'system' : 'none'),
+				model: geminiModel,
 			},
 		};
 	}

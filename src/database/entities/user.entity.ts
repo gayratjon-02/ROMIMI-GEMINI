@@ -35,6 +35,14 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   api_key_gemini: string;
 
+  /** Override Claude model (e.g. claude-sonnet-4-20250514). Null = use system default. */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  claude_model: string;
+
+  /** Override Gemini model (e.g. gemini-3-pro-image-preview). Null = use system default. */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  gemini_model: string;
+
   @Column({ type: 'varchar', length: 50, nullable: true, default: 'en' })
   language: string;
 
