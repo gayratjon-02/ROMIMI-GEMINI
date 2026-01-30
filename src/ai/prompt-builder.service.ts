@@ -380,7 +380,17 @@ export class PromptBuilderService {
         // 6.6 CLOSE UP BACK — FORCE: resolution suffix at very end
         const closeUpBackPrompt = this.buildCloseUpBackPrompt(product, da, qualitySuffix);
         // Force strict no-human negative prompt for closeups
-        const closeUpBackNegative = this.buildShotNegativePrompt('closeup_back', product) + ', face, head, hands, legs, person, human, body, street scene, walking, distance shot';
+        let closeUpBackNegative = this.buildShotNegativePrompt('closeup_back', product) + ', face, head, hands, legs, person, human, body, street scene, walking, distance shot';
+
+        // 🚀 ANTI-ROUND SHIELD: If patch is square/rectangular, blocking round shapes
+        const patchDetail = product.design_back?.patch_detail || '';
+        const backDesc = product.design_back?.description || '';
+        const backText = (patchDetail + ' ' + backDesc).toLowerCase();
+
+        if (backText.includes('square') || backText.includes('rectang')) {
+            closeUpBackNegative += ', circular patch, round patch, oval patch, curved edges, rounded corners, sphere shaped patch';
+        }
+
         const closeup_back: MergedPromptObject = {
             ...SHOT_CONFIGS.closeup_back,
             prompt: closeUpBackPrompt + resolutionSuffix,
@@ -852,8 +862,20 @@ export class PromptBuilderService {
         );
         const texturePhrase = textureReinforcement ? `. ${textureReinforcement}` : '';
 
+        // 🚀 GEOMETRY ENFORCEMENT: Detect explicit shape keywords
+        const combinedText = (patchDetail + ' ' + (product.design_back.description || '')).toLowerCase();
+        let geometryPhrase = '';
+
+        if (combinedText.includes('square')) {
+            geometryPhrase = 'Macro focus on the sharply DEFINED SQUARE geometric shape of the leather patch, featuring four distinct sharp corners and straight edges. Contained within this square boundary is ';
+        } else if (combinedText.includes('rectang')) { // matches rectangle, rectangular
+            geometryPhrase = 'Macro focus on the sharply DEFINED RECTANGULAR geometric shape of the leather patch, featuring four distinct sharp corners and straight edges. Contained within this rectangular boundary is ';
+        }
+
+        const focusPhrase = geometryPhrase ? `${geometryPhrase}${patchDetail}` : `Focus on ${patchDetail}`;
+
         return `Macro detail shot of ${weightedColor} rear brand patch. ` +
-            `Focus on ${patchDetail}${techniqueText}${texturePhrase}. ` +
+            `${focusPhrase}${techniqueText}${texturePhrase}. ` +
             `Emphasizing craftsmanship and quality.${qualitySuffix}`;
     }
 }
