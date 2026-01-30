@@ -796,6 +796,44 @@ export class GenerationsService {
 	}
 
 	/**
+	 * Convert Collection's AnalyzedDAJSON to AnalyzeDAPresetResponse format
+	 * Required because collections use a different DA format than DA presets
+	 */
+	private convertCollectionDAToPresetFormat(daJSON: Record<string, any>, collectionName?: string): AnalyzeDAPresetResponse {
+		// Extract props - split items array into left/right sides
+		const propsItems: string[] = daJSON.props?.items || [];
+		const midpoint = Math.ceil(propsItems.length / 2);
+		const leftProps = propsItems.slice(0, midpoint);
+		const rightProps = propsItems.slice(midpoint);
+
+		return {
+			da_name: collectionName || 'Collection DA',
+			background: {
+				type: daJSON.background?.description || daJSON.background?.color_name || 'Clean studio background',
+				hex: daJSON.background?.color_hex || '#FFFFFF',
+			},
+			floor: {
+				type: daJSON.background?.texture || 'Smooth surface',
+				hex: daJSON.background?.color_hex || '#F5F5F5',
+			},
+			props: {
+				left_side: leftProps.length > 0 ? leftProps : ['minimal decor'],
+				right_side: rightProps.length > 0 ? rightProps : ['minimal decor'],
+			},
+			styling: {
+				pants: daJSON.styling?.bottom || 'Black chino pants',
+				footwear: daJSON.styling?.feet || 'BAREFOOT',
+			},
+			lighting: {
+				type: daJSON.lighting?.type || 'softbox',
+				temperature: daJSON.lighting?.temperature || 'neutral',
+			},
+			mood: daJSON.mood || 'Professional editorial',
+			quality: daJSON.quality || 'professional editorial photography',
+		};
+	}
+
+	/**
 	 * STEP 3: Merge Product + DA → 6 prompts
 	 */
 	async mergePrompts(generationId: string, userId: string, input?: { model_type?: 'adult' | 'kid' }): Promise<MergedPrompts> {
@@ -826,11 +864,15 @@ export class GenerationsService {
 
 		const daJSON = generation.collection.analyzed_da_json;
 
+		// Convert Collection's AnalyzedDAJSON to AnalyzeDAPresetResponse format
+		const convertedDA = this.convertCollectionDAToPresetFormat(daJSON, generation.collection.name);
+		this.logger.debug(`Converted DA JSON: ${JSON.stringify(convertedDA).substring(0, 300)}...`);
+
 		// Use PromptBuilderService for strict deterministic templates
 		// Now returns full MergedPrompts format with all shot details
 		const generatedPrompts = this.promptBuilderService.buildPrompts({
 			product: productJSON as AnalyzeProductDirectResponse,
-			da: daJSON as AnalyzeDAPresetResponse,
+			da: convertedDA,
 			options: {
 				model_type: (input?.model_type as 'adult' | 'kid') || 'adult',
 			}
