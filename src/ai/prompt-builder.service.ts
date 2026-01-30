@@ -304,10 +304,14 @@ export class PromptBuilderService {
 
         // 🚀 STRICT NEGATIVE PROMPTING FOR SOLO
         let soloNegative = negativePrompt;
+        const TWO_PEOPLE_NEGATIVES = ', two people, two subjects, father and son, parent, family, group, couple, second person, crowd, background people, multiple people, holding hands, looking at each other, double body, twin, clone';
+
         if (soloSubject === 'kid') {
-            soloNegative += ', beard, stubble, mustache, facial hair, adult, mature man, wrinkles, tall, muscular';
+            // For KID solo: Block adults/fathers AND second person
+            soloNegative += `${TWO_PEOPLE_NEGATIVES}, adult, man, father, male model, beard, stubble, mustache, facial hair, mature man, wrinkles, tall, muscular`;
         } else {
-            soloNegative += ', child, kid, toddler, baby, small size';
+            // For ADULT solo: Block kids AND second person
+            soloNegative += `${TWO_PEOPLE_NEGATIVES}, child, kid, toddler, baby, small size, son, daughter`;
         }
 
         const solo: MergedPromptObject = {
@@ -710,7 +714,7 @@ export class PromptBuilderService {
             subject = 'Cute young boy, age 5-7, child model, standing naturally, playful natural pose';
         }
 
-        return `Photorealistic editorial fashion photography. Medium Shot. ${subject}. ` +
+        return `Photorealistic editorial fashion photography. Medium Shot. Single isolated portrait of ${subject}. ` +
             `${baseAttire}. ${product.design_front.description}. ${logoTextFront}. ` +
             `${styling}. ${scene}.${zipperText} ` +
             `Real human skin texture, editorial quality.${qualitySuffix}`;
