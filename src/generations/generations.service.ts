@@ -449,7 +449,7 @@ export class GenerationsService {
 			throw new BadRequestException('Product must be analyzed first');
 		}
 
-			// 2. Build prompts using PromptBuilder (include resolution for quality suffix)
+		// 2. Build prompts using PromptBuilder (include resolution for quality suffix)
 		const generatedPrompts = this.promptBuilderService.buildPromptsFromEntities({
 			product: generation.product,
 			daPreset: generation.da_preset,
@@ -1696,19 +1696,52 @@ export class GenerationsService {
 			if (visual.image_filename) {
 				try {
 					const uploadDir = process.env.UPLOAD_DIR || './uploads';
-					const localPath = `${uploadDir}/${visual.image_filename}`;
 					const fs = await import('fs/promises');
-					buffer = await fs.readFile(localPath);
-					ext = visual.image_filename.split('.').pop() || 'jpg';
 
-					const visualType = visual.type || `visual_${index + 1}`;
-					const fileName = visualTypeMap[visualType] || `visual_${index + 1}`;
-					const filePath = `ROMIMI/${sanitizedCollectionName}/${sanitizedProductName}/${fileName}.${ext}`;
+					// Helper to check and read file
+					const tryReadFile = async (pathToCheck: string): Promise<Buffer | null> => {
+						try {
+							return await fs.readFile(pathToCheck);
+						} catch {
+							return null;
+						}
+					};
 
-					return { buffer, filePath };
+					// Try multiple possible paths
+					const possiblePaths = [
+						`${uploadDir}/${visual.image_filename}`,
+						`${uploadDir}/productAnalyzedImages/${visual.image_filename}`,
+						`${uploadDir}/generations/${visual.image_filename}`
+					];
+
+					// Also try to extract path from URL if available
+					if (visual.image_url && visual.image_url.includes('/uploads/')) {
+						const parts = visual.image_url.split('/uploads/');
+						if (parts.length > 1) {
+							possiblePaths.unshift(`${uploadDir}/${parts[1]}`);
+						}
+					}
+
+					let buffer: Buffer | null = null;
+					for (const p of possiblePaths) {
+						buffer = await tryReadFile(p);
+						if (buffer) break;
+					}
+
+					if (buffer) {
+						ext = visual.image_filename.split('.').pop() || 'jpg';
+						const visualType = visual.type || `visual_${index + 1}`;
+						const fileName = visualTypeMap[visualType] || `visual_${index + 1}`;
+						const filePath = `ROMIMI/${sanitizedCollectionName}/${sanitizedProductName}/${fileName}.${ext}`;
+
+						return { buffer, filePath };
+					}
+
+					// File not found locally, warn and fall back to URL
+					this.logger.warn(`Local file not found after searching paths: ${visual.image_filename}, falling back to URL`);
 				} catch (err) {
-					// File not found locally, fall back to URL fetch
-					this.logger.warn(`Local file not found: ${visual.image_filename}, falling back to URL`);
+					// Unexpected error
+					this.logger.warn(`Error reading local file: ${err.message}, falling back to URL`);
 				}
 			}
 
