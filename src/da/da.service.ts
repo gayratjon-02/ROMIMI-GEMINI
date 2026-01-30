@@ -37,11 +37,14 @@ export class DAService {
 		this.logger.log(`   Image URL: ${imageUrl}`);
 
 		// 1. Call Claude AI to analyze
-		const result = await this.claudeService.analyzeDAForPreset(imageUrl, presetName);
+		let result = await this.claudeService.analyzeDAForPreset(imageUrl, presetName);
+
+		// 2. Apply brand rules (post-processing safety net)
+		result = this.applyBrandRules(result);
 
 		this.logger.log('✅ DA Reference Analysis Result - Saving to DB...');
 
-		// 2. Save directly to Database
+		// 3. Save directly to Database
 		const code = `custom_${Date.now()}`; // Generate unique code
 
 		const preset = this.daPresetRepository.create({
@@ -71,6 +74,73 @@ export class DAService {
 		this.logger.log(`💾 DA Preset saved: ${savedPreset.id} (${savedPreset.name})`);
 
 		return savedPreset;
+	}
+
+	/**
+	 * 🛡️ Brand Rules Post-Processing
+	 * 
+	 * Ensures AI output conforms to strict schema and business rules.
+	 * This is a safety net AFTER Claude returns JSON.
+	 * 
+	 * RULES:
+	 * 1. Props must have left_side/right_side arrays (not items/placement)
+	 * 2. Indoor scenes force BAREFOOT styling
+	 * 3. Default pants to brand standard if missing
+	 */
+	private applyBrandRules(daJson: AnalyzeDAPresetResponse): AnalyzeDAPresetResponse {
+		this.logger.log('🛡️ Applying Brand Rules post-processing...');
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 1: Normalize Props to left_side / right_side
+		// ═══════════════════════════════════════════════════════════
+		const rawProps = daJson.props as any;
+
+		// If AI returned 'items' array instead of left/right, split it
+		if (rawProps?.items && Array.isArray(rawProps.items)) {
+			this.logger.warn('⚠️ AI returned "items" array - normalizing to left_side/right_side');
+			const items = rawProps.items;
+			const midpoint = Math.ceil(items.length / 2);
+			daJson.props = {
+				left_side: items.slice(0, midpoint),
+				right_side: items.slice(midpoint),
+			};
+		}
+
+		// Ensure arrays exist
+		if (!Array.isArray(daJson.props?.left_side)) {
+			daJson.props.left_side = [];
+		}
+		if (!Array.isArray(daJson.props?.right_side)) {
+			daJson.props.right_side = [];
+		}
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 2: The Barefoot Rule (Indoor scenes)
+		// ═══════════════════════════════════════════════════════════
+		const backgroundJson = JSON.stringify(daJson.background || {}).toLowerCase();
+		const moodJson = (daJson.mood || '').toLowerCase();
+
+		// Detect indoor environment
+		const indoorKeywords = /room|home|indoor|wall|floor|studio|bedroom|living|office|plaster|interior|apartment/i;
+		const isIndoor = indoorKeywords.test(backgroundJson) || indoorKeywords.test(moodJson);
+
+		if (isIndoor) {
+			const currentFootwear = (daJson.styling?.footwear || '').toLowerCase();
+			if (currentFootwear !== 'barefoot') {
+				this.logger.warn(`⚠️ Indoor scene detected but footwear was "${daJson.styling.footwear}" - forcing BAREFOOT`);
+				daJson.styling.footwear = 'BAREFOOT';
+			}
+		}
+
+		// ═══════════════════════════════════════════════════════════
+		// RULE 3: Default Pants (Brand Standard)
+		// ═══════════════════════════════════════════════════════════
+		if (!daJson.styling?.pants) {
+			daJson.styling.pants = 'Black chino pants (#1A1A1A)';
+		}
+
+		this.logger.log('✅ Brand Rules applied successfully');
+		return daJson;
 	}
 
 	/**

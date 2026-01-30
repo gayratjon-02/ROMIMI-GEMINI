@@ -15,4 +15,12 @@ export class GenerateDto {
 	@IsString({ message: ValidationMessage.FIELD_INVALID })
 	@IsOptional()
 	model?: string;
+
+	@IsString({ message: ValidationMessage.FIELD_INVALID })
+	@IsOptional()
+	resolution?: string;
+
+	@IsString({ message: ValidationMessage.FIELD_INVALID })
+	@IsOptional()
+	aspect_ratio?: string;
 }
