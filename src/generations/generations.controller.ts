@@ -225,6 +225,10 @@ export class GenerationsController {
 	/**
 	 * STEP 3: Merge Product + DA (STEP 3)
 	 * POST /api/generations/:id/merge
+	 * 
+	 * Supports:
+	 * - Legacy: model_type applies to ALL shots
+	 * - NEW: shot_options for granular per-shot control
 	 */
 	@Post(':id/merge')
 	async mergePrompts(
@@ -234,6 +238,7 @@ export class GenerationsController {
 	): Promise<{ generation_id: string; merged_prompts: MergedPrompts; status: string; merged_at: string }> {
 		const mergedPrompts = await this.generationsService.mergePrompts(id, user.id, {
 			model_type: mergePromptsDto?.model_type,
+			shot_options: mergePromptsDto?.shot_options,
 		});
 		return {
 			generation_id: id,

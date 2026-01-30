@@ -858,8 +858,19 @@ export class GenerationsService {
 
 	/**
 	 * STEP 3: Merge Product + DA → 6 prompts
+	 * 
+	 * Supports:
+	 * - Legacy: model_type applies to ALL shots
+	 * - NEW: shot_options for granular per-shot control
 	 */
-	async mergePrompts(generationId: string, userId: string, input?: { model_type?: 'adult' | 'kid' }): Promise<MergedPrompts> {
+	async mergePrompts(
+		generationId: string,
+		userId: string,
+		input?: {
+			model_type?: 'adult' | 'kid';
+			shot_options?: import('../common/interfaces/shot-options.interface').ShotOptions;
+		}
+	): Promise<MergedPrompts> {
 		const generation = await this.generationsRepository.findOne({
 			where: { id: generationId },
 			relations: ['product', 'collection'],
@@ -891,13 +902,19 @@ export class GenerationsService {
 		const convertedDA = this.convertCollectionDAToPresetFormat(daJSON, generation.collection.name);
 		this.logger.debug(`Converted DA JSON: ${JSON.stringify(convertedDA).substring(0, 300)}...`);
 
+		// 🆕 Log shot options if provided
+		if (input?.shot_options) {
+			this.logger.log(`🎯 Using shot_options for granular control: ${JSON.stringify(input.shot_options)}`);
+		}
+
 		// Use PromptBuilderService for strict deterministic templates
-		// Now returns full MergedPrompts format with all shot details
+		// Now supports both legacy model_type and new shot_options
 		const generatedPrompts = this.promptBuilderService.buildPrompts({
 			product: productJSON as AnalyzeProductDirectResponse,
 			da: convertedDA,
 			options: {
-				model_type: (input?.model_type as 'adult' | 'kid') || 'adult',
+				model_type: input?.model_type || 'adult',
+				shot_options: input?.shot_options,
 			}
 		});
 

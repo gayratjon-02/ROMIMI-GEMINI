@@ -3,6 +3,7 @@ import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct
 import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
 import { DAPreset, DAPresetConfig } from '../database/entities/da-preset.entity';
 import { Product } from '../database/entities/product.entity';
+import { ShotOptions, createDefaultShotOptions } from '../common/interfaces/shot-options.interface';
 import {
     MergedPrompts,
     MergedPromptObject,
@@ -20,7 +21,10 @@ interface MergeInput {
     product: AnalyzeProductDirectResponse;
     da: AnalyzeDAPresetResponse;
     options: {
-        model_type: 'adult' | 'kid';
+        /** @deprecated Use shot_options instead */
+        model_type?: 'adult' | 'kid';
+        /** NEW: Per-shot control options */
+        shot_options?: ShotOptions;
     };
 }
 
@@ -30,7 +34,10 @@ interface MergeInput {
 interface EntityMergeInput {
     product: Product;
     daPreset: DAPreset;
-    modelType: 'adult' | 'kid';
+    /** @deprecated Use shotOptions instead */
+    modelType?: 'adult' | 'kid';
+    /** NEW: Per-shot control options */
+    shotOptions?: ShotOptions;
 }
 
 /**
@@ -129,9 +136,10 @@ export class PromptBuilderService {
     /**
      * 🆕 Build prompts from DB entities directly (Phase 3)
      * This is the main method for the new workflow
+     * Supports both legacy modelType and new shotOptions
      */
     buildPromptsFromEntities(input: EntityMergeInput): GeneratedPrompts {
-        const { product, daPreset, modelType } = input;
+        const { product, daPreset, modelType, shotOptions } = input;
 
         this.logger.log(`🏗️ Building prompts from entities: Product=${product.name}, DA=${daPreset.name}`);
 
@@ -156,11 +164,14 @@ export class PromptBuilderService {
             quality: daConfig.quality,
         };
 
-        // Use the standard buildPrompts method
+        // Use the standard buildPrompts method with shotOptions OR legacy modelType
         return this.buildPrompts({
             product: productJson,
             da,
-            options: { model_type: modelType },
+            options: {
+                model_type: modelType,
+                shot_options: shotOptions,
+            },
         });
     }
 
@@ -262,11 +273,27 @@ export class PromptBuilderService {
             last_edited_at: null,
         };
 
-        // 6.2 SOLO
-        const soloPrompt = this.buildSoloPrompt(product, da, options.model_type, baseAttire, styling, scene, zipperText, logoTextFront, qualitySuffix);
+        // ═══════════════════════════════════════════════════════════
+        // 🆕 SHOT OPTIONS: Derive per-shot settings from options
+        // ═══════════════════════════════════════════════════════════
+        // If shot_options provided, use per-shot settings
+        // Otherwise, fall back to legacy model_type (backward compatible)
+        const shotOptions = options.shot_options || createDefaultShotOptions(options.model_type || 'adult');
+
+        // SOLO: Get subject from shot_options.solo.subject
+        const soloSubject = shotOptions.solo?.subject || options.model_type || 'adult';
+
+        // FLAT LAY: Get size from shot_options.flatlay_front.size / flatlay_back.size
+        const flatLayFrontSize = shotOptions.flatlay_front?.size || options.model_type || 'adult';
+        const flatLayBackSize = shotOptions.flatlay_back?.size || options.model_type || 'adult';
+
+        this.logger.log(`🎯 Shot Settings: SOLO=${soloSubject}, FlatLayFront=${flatLayFrontSize}, FlatLayBack=${flatLayBackSize}`);
+
+        // 6.2 SOLO (uses soloSubject - can be different from flat lay)
+        const soloPrompt = this.buildSoloPrompt(product, da, soloSubject, baseAttire, styling, scene, zipperText, logoTextFront, qualitySuffix);
         const solo: MergedPromptObject = {
             ...SHOT_CONFIGS.solo,
-            display_name: options.model_type === 'adult' ? 'SOLO Adult Model' : 'SOLO Kid Model',
+            display_name: soloSubject === 'adult' ? 'SOLO Adult Model' : 'SOLO Kid Model',
             prompt: soloPrompt,
             negative_prompt: negativePrompt,
             background,
@@ -276,36 +303,36 @@ export class PromptBuilderService {
             last_edited_at: null,
         };
 
-        // 6.3 FLAT LAY FRONT (with size variation + shot-specific negative prompt)
-        const flatLayFrontPrompt = this.buildFlatLayFrontPrompt(product, da, options.model_type, logoTextFront, qualitySuffix);
+        // 6.3 FLAT LAY FRONT (uses flatLayFrontSize - independent from solo and flat lay back)
+        const flatLayFrontPrompt = this.buildFlatLayFrontPrompt(product, da, flatLayFrontSize, logoTextFront, qualitySuffix);
         const flatLayFrontNegative = this.buildShotNegativePrompt('flatlay_front', product);
         const flatlay_front: MergedPromptObject = {
             ...SHOT_CONFIGS.flatlay_front,
-            display_name: options.model_type === 'adult' ? 'Flat Lay Front (Adult Size)' : 'Flat Lay Front (Kid Size)',
+            display_name: flatLayFrontSize === 'adult' ? 'Flat Lay Front (Adult Size)' : 'Flat Lay Front (Kid Size)',
             prompt: flatLayFrontPrompt,
             negative_prompt: flatLayFrontNegative,
             background,
             product_details: {
                 ...productDetails,
-                size: options.model_type === 'adult' ? 'Adult Size' : 'Kid Size',
+                size: flatLayFrontSize === 'adult' ? 'Adult Size' : 'Kid Size',
             },
             da_elements: daElements,
             editable: true,
             last_edited_at: null,
         };
 
-        // 6.4 FLAT LAY BACK (with size variation + shot-specific negative prompt)
-        const flatLayBackPrompt = this.buildFlatLayBackPrompt(product, da, options.model_type, qualitySuffix);
+        // 6.4 FLAT LAY BACK (uses flatLayBackSize - can be different from front)
+        const flatLayBackPrompt = this.buildFlatLayBackPrompt(product, da, flatLayBackSize, qualitySuffix);
         const flatLayBackNegative = this.buildShotNegativePrompt('flatlay_back', product);
         const flatlay_back: MergedPromptObject = {
             ...SHOT_CONFIGS.flatlay_back,
-            display_name: options.model_type === 'adult' ? 'Flat Lay Back (Adult Size)' : 'Flat Lay Back (Kid Size)',
+            display_name: flatLayBackSize === 'adult' ? 'Flat Lay Back (Adult Size)' : 'Flat Lay Back (Kid Size)',
             prompt: flatLayBackPrompt,
             negative_prompt: flatLayBackNegative,
             background,
             product_details: {
                 ...productDetails,
-                size: options.model_type === 'adult' ? 'Adult Size' : 'Kid Size',
+                size: flatLayBackSize === 'adult' ? 'Adult Size' : 'Kid Size',
             },
             da_elements: daElements,
             editable: true,
