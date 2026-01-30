@@ -22,14 +22,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 	}
 
 	async validate(payload: any): Promise<User> {
-		const user = await this.usersRepository.findOne({
-			where: { id: payload.sub },
-		});
+		// Select only columns that exist before migration (claude_model/gemini_model may not exist yet)
+		const user = await this.usersRepository
+			.createQueryBuilder('user')
+			.select([
+				'user.id',
+				'user.email',
+				'user.name',
+				'user.password_hash',
+				'user.brand_brief',
+				'user.api_key_openai',
+				'user.api_key_anthropic',
+				'user.api_key_gemini',
+				'user.language',
+				'user.theme',
+				'user.notifications_enabled',
+				'user.created_at',
+				'user.updated_at',
+			])
+			.where('user.id = :id', { id: payload.sub })
+			.getOne();
 
 		if (!user) {
 			throw new UnauthorizedException(AuthMessage.UNAUTHORIZED);
 		}
 
-		return user;
+		return user as User;
 	}
 }

@@ -57,10 +57,17 @@ export class AuthService {
 	async login(loginDto: LoginDto): Promise<AuthResponseDto> {
 		const { email, password } = loginDto;
 
-		// Find user
-		const user = await this.usersRepository.findOne({
-			where: { email },
-		});
+		// Find user (select only columns that exist before migration)
+		const user = await this.usersRepository
+			.createQueryBuilder('user')
+			.select([
+				'user.id',
+				'user.email',
+				'user.name',
+				'user.password_hash',
+			])
+			.where('user.email = :email', { email })
+			.getOne();
 
 		if (!user) {
 			throw new UnauthorizedException(AuthMessage.INVALID_EMAIL_OR_PASSWORD);
