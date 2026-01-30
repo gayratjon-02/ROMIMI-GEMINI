@@ -154,6 +154,17 @@ Your analysis must be extremely precise, prioritizing anatomical placement, exac
    * Wearer's Right Hip area
    * Below front pocket seam
 
+9. **TYPOGRAPHY CLASSIFICATION LAW (Script vs. Serif):**
+   ⚠️ CRITICAL: Do NOT confuse Cursive/Handwritten with Classic Serif!
+
+   | Visual Evidence | Correct Output |
+   |-----------------|----------------|
+   | Connected letters, handwritten style | "Script wordmark" |
+   | Separate letters, Times New Roman style, triangular feet | "Serif wordmark" |
+   | Block letters, no feet, geometric | "Sans-serif wordmark" |
+
+   **Specific Brand Rule:** "Romimi" logo is usually a CLASSIC SERIF font (separate letters), NOT script. Check carefully.
+
 ═══════════════════════════════════════════════════════════
 📋 REQUIRED JSON OUTPUT FORMAT
 ═══════════════════════════════════════════════════════════

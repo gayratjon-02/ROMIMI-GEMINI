@@ -184,6 +184,18 @@ export class ClaudeService {
 		}
 
 		// Validate and ensure all required fields exist with proper structure
+
+		// 🚀 BRAND GUARDIAN: Force "Romimi" text to be "Serif wordmark" (Fixes Script hallucination)
+		if (parsed.design_front?.logo_text && parsed.design_front.logo_text.toLowerCase().includes('romimi')) {
+			this.logger.log(`🛡️ Brand Guardian: Detected 'Romimi' logo. Overriding hallucinated '${parsed.design_front.logo_type}' with 'Serif wordmark'.`);
+			parsed.design_front.logo_type = 'Serif wordmark';
+			parsed.design_front.logo_content = "Clean white 'Romimi' text in classic Serif font";
+			// Fix description if it contains "script"
+			if (parsed.design_front.description) {
+				parsed.design_front.description = parsed.design_front.description.replace(/script/gi, 'classic Serif');
+			}
+		}
+
 		const result: AnalyzeProductDirectResponse = {
 			general_info: {
 				product_name: parsed.general_info?.product_name || 'UNNAMED PRODUCT',
