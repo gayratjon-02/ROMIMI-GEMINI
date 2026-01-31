@@ -50,6 +50,12 @@ You MUST include the following missing fields in your JSON analysis:
    - Light colors: "Off-White", "Cream", "Light Gray"
    - NEVER say "Unknown Color" - make your best professional guess
 
+6. 🔬 MICRO-DETAILS & SEAM ANALYSIS (THE "IDEAL" STANDARD):
+   - You MUST analyze every corner, edge, and seam.
+   - REPORT: Top vs Bottom, Left vs Right, Corner terminations.
+   - "Bar-tacked pocket corners", "Double-stitched side seams", "Split hem with 2cm vent"
+   - DO NOT be vague. We need manufacturing-level precision.
+
 ═══════════════════════════════════════════════════════════
 📋 REQUIRED JSON OUTPUT
 ═══════════════════════════════════════════════════════════
@@ -71,7 +77,8 @@ If you omit or half-ass these, the generation will fail. Be precise.
     "sleeves": "String (e.g., Set-in sleeves with elasticated cuffs)",
     "pockets": "String (e.g., Two side zip pockets with tonal zippers)",
     "fit": "String (e.g., Regular fit, Oversized, Slim fit)",
-    "accents": "String (e.g., Contrast piping, Embroidered badge, Reflective details)"
+    "accents": "String (e.g., Contrast piping, Embroidered badge, Reflective details)",
+    "seams_and_corners": "String (MANDATORY: Micro-details of seams, hems, and corner terminations)"
   },
   "logo_front": {
     "detected": true,

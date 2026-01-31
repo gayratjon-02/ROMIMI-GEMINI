@@ -7,6 +7,7 @@ export interface ProductDetails {
   fit?: string;
   sleeves?: string;
   accents?: string;
+  seams_and_corners?: string;
 }
 
 export interface LogoInfo {

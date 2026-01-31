@@ -165,6 +165,21 @@ Your analysis must be extremely precise, prioritizing anatomical placement, exac
 
    **Specific Brand Rule:** "Romimi" logo is usually a CLASSIC SERIF font (separate letters), NOT script. Check carefully.
 
+10. **MICRO-GEOMETRY & SEAM ARCHITECTURE (The 'Ideal' Standard):**
+    ⚠️ CRITICAL: Analyze every corner, edge, and seam. Report exact positioning!
+
+    **You must analyze and report details for:**
+    * **TOP:** Neckline construction, shoulder seam angles, collar points
+    * **BOTTOM:** Hem finishing (straight/curved/split), corner stitching
+    * **LEFT/RIGHT:** Side seam details, vents, tag placements
+    * **MIDDLE:** Placket width, zipper teeth size, fabric drape
+    * **CORNERS:** Pocket corners (bar-tacked? riveted?), hem corners
+
+    **Example Output:**
+    * "Square hem with 2cm side vents and bar-tacked corners"
+    * "Double-stitched shoulder seams located 2cm forward of natural shoulder line"
+    * "Wearer's left chest pocket with reinforced triangular top corners"
+
 ═══════════════════════════════════════════════════════════
 📋 REQUIRED JSON OUTPUT FORMAT
 ═══════════════════════════════════════════════════════════
@@ -191,7 +206,8 @@ Return ONLY valid JSON. Do not include markdown formatting.
     "logo_color": "Specific color (e.g. 'Off-white', 'Tonal matching')",
     "placement": "PRECISE location (e.g. 'Wearer's left chest, 3cm below shoulder seam')",
     "size": "REQUIRED: Size estimate (e.g. 'Small discrete, approx. 5cm wide')",
-    "description": "Full visual description with placement context"
+    "description": "Full visual description with placement context",
+    "micro_details": "Specific corner/edge details (e.g. 'Sharp 90-degree collar points', 'Rounded pocket corners')"
   },
   "design_back": {
     "has_logo": true/false,
@@ -203,14 +219,16 @@ Return ONLY valid JSON. Do not include markdown formatting.
     "patch_color": "Rich color (e.g. 'Deep espresso brown leather')",
     "patch_detail": "What's inside the patch",
     "placement": "PRECISE location (e.g. 'Upper back yoke, between shoulder blades, 8cm below collar')",
-    "size": "REQUIRED: Size estimate (e.g. 'Small discrete, approx. 5x7cm')"
+    "size": "REQUIRED: Size estimate (e.g. 'Small discrete, approx. 5x7cm')",
+    "micro_details": "Seam/corner analysis (e.g. 'Double-stitched yolk seam', 'Straight hemline')"
   },
   "garment_details": {
     "pockets": "Full description with Wearer's Left/Right positions",
     "sleeves_or_legs": "Construction detail (e.g. 'Tapered leg with flat-felled seams')",
-    "bottom_termination": "CRITICAL: Apply Zipper vs Cuff Law!",
+    "bottom_termination": "CRITICAL: Apply Zipper vs Cuff Law! Describe hem corners/vents.",
     "hardware_finish": "Precise finish (e.g. 'Polished silver-tone metal zippers, brushed nickel aglets')",
-    "neckline": "'N/A' for pants, or precise description for tops"
+    "neckline": "'N/A' for pants, or precise description for tops",
+    "seam_architecture": "Description of major seams (e.g. 'Flatlock stitching on side seams', 'Topstitched shoulders')"
   }
 }
 
@@ -226,12 +244,15 @@ Return ONLY valid JSON. Do not include markdown formatting.
 ❌ Calling a jacket "Bomber" when it has NO ribbed cuffs
 ❌ "White aglets" when they are actually silver/metallic
 ❌ Missing thigh branding on pants
+❌ Ignoring corner details (rounded vs sharp)
+❌ Ignoring seam types (single vs double stitch)
 
 ✅ PLACEMENT: Use anatomical landmarks (yoke, shoulder blades, chest pocket line)
 ✅ SIZE: Include approximate cm dimensions
 ✅ SHAPE: Distinguish carrier material shape from artwork shape
 ✅ COLOR: Use depth adjectives + precise color + finish
 ✅ CONSTRUCTION: Ribbed cuffs = Bomber, Straight hem = Trucker
+✅ MICRO-DETAILS: Report corner shapes, stitch types, and exact edge terminations
 
 ═══════════════════════════════════════════════════════════
 ⚡ EXECUTION PROTOCOL
@@ -246,6 +267,7 @@ Return ONLY valid JSON. Do not include markdown formatting.
 7. Use RICH color descriptions (depth + color + finish)
 8. Describe ALL hardware with precise material/finish
 9. Use Wearer's Left/Right for spatial accuracy
-10. Return ONLY valid JSON - no markdown, no explanations
+10. **PERFORM MICRO-ANALYSIS:** Check top, bottom, middle, left/right, and corners for every element.
+11. Return ONLY valid JSON - no markdown, no explanations
 
 BEGIN MANUFACTURING-GRADE TECHNICAL ANALYSIS NOW.`;

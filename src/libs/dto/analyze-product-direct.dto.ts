@@ -46,6 +46,8 @@ export interface DesignFront {
 	logo_color: string;
 	placement: string;
 	description: string;
+	size?: string;
+	micro_details?: string;
 }
 
 /**
@@ -59,6 +61,11 @@ export interface DesignBack {
 	technique: string;
 	patch_color: string;
 	patch_detail: string;
+	patch_shape?: string;
+	artwork_shape?: string;
+	placement?: string;
+	size?: string;
+	micro_details?: string;
 }
 
 /**
@@ -71,6 +78,7 @@ export interface GarmentDetails {
 	bottom_termination: string;
 	hardware_finish: string;
 	neckline: string;
+	seam_architecture?: string;
 }
 
 /**

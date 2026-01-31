@@ -802,8 +802,13 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 2: APPAREL (What they're wearing)
         // ═══════════════════════════════════════════════════════════
+        const detailsPart = [
+            product.design_front.micro_details ? `Details: ${product.design_front.micro_details}` : '',
+            product.garment_details.seam_architecture ? `Construction: ${product.garment_details.seam_architecture}` : ''
+        ].filter(Boolean).join('. ');
+
         const apparelPart = `Both wearing matching ${product.visual_specs.color_name} ${product.general_info.category}. ` +
-            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${zipperText}`;
+            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${zipperText}`;
 
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 3: ENVIRONMENT (Where)
@@ -857,8 +862,13 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 2: APPAREL (What they're wearing)
         // ═══════════════════════════════════════════════════════════
+        const detailsPart = [
+            product.design_front.micro_details ? `Details: ${product.design_front.micro_details}` : '',
+            product.garment_details.seam_architecture ? `Construction: ${product.garment_details.seam_architecture}` : ''
+        ].filter(Boolean).join('. ');
+
         const apparelPart = `${baseAttire}. ` +
-            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${logoTextFront}. ${zipperText}`;
+            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${logoTextFront}. ${zipperText}`;
 
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 3: ENVIRONMENT (Where)
