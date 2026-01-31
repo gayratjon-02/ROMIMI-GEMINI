@@ -310,11 +310,20 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         // If shot_options provided, use per-shot settings
         // Otherwise, fall back to legacy model_type (backward compatible)
+
+        // 🔍 DEBUG: Log raw options received
+        this.logger.log(`🔍 DEBUG options.shot_options RAW: ${JSON.stringify(options.shot_options)}`);
+        this.logger.log(`🔍 DEBUG options.model_type: ${options.model_type}`);
+
         const shotOptions = options.shot_options || createDefaultShotOptions(options.model_type || 'adult');
+
+        // 🔍 DEBUG: Log resolved shotOptions
+        this.logger.log(`🔍 DEBUG resolved shotOptions: ${JSON.stringify(shotOptions)}`);
+        this.logger.log(`🔍 DEBUG shotOptions.solo: ${JSON.stringify(shotOptions.solo)}`);
 
         // SOLO: Get subject from shot_options.solo.subject
         const soloSubject = shotOptions.solo?.subject || options.model_type || 'adult';
-        this.logger.log(`🎯 Prompt Builder Resolved SOLO Subject: "${soloSubject}" (from shotOptions: ${shotOptions.solo?.subject}, modelType: ${options.model_type})`);
+        this.logger.log(`🎯 Prompt Builder Resolved SOLO Subject: "${soloSubject}" (from shotOptions.solo.subject: ${shotOptions.solo?.subject}, fallback model_type: ${options.model_type})`);
 
         // FLAT LAY: Get size from shot_options.flatlay_front.size / flatlay_back.size
         const flatLayFrontSize = shotOptions.flatlay_front?.size || options.model_type || 'adult';

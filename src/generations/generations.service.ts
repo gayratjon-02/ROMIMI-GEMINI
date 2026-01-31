@@ -929,12 +929,13 @@ export class GenerationsService {
 		const convertedDA = this.convertCollectionDAToPresetFormat(daJSON, generation.collection.name);
 		this.logger.debug(`Converted DA JSON: ${JSON.stringify(convertedDA).substring(0, 300)}...`);
 
-		// 🆕 Log shot options if provided
+		// 🆕 Log shot options - CRITICAL DEBUG
+		this.logger.log(`🔍 MERGE DEBUG - input received: ${JSON.stringify(input)}`);
 		if (input?.shot_options) {
-			this.logger.log(`🎯 Using shot_options for granular control: ${JSON.stringify(input.shot_options)}`);
-			if (input.shot_options.solo) {
-				this.logger.log(`🎯 SOLO Option Debug: subject=${(input.shot_options.solo as any).subject}, enabled=${input.shot_options.solo.enabled}`);
-			}
+			this.logger.log(`🎯 shot_options provided: ${JSON.stringify(input.shot_options)}`);
+			this.logger.log(`🎯 SOLO subject = "${(input.shot_options.solo as any)?.subject}"`);
+		} else {
+			this.logger.warn(`⚠️ shot_options is UNDEFINED/NULL - will use defaults`);
 		}
 
 		// Use PromptBuilderService for strict deterministic templates

@@ -237,6 +237,11 @@ export class GenerationsController {
 		@CurrentUser() user: User,
 		@Body() mergePromptsDto?: MergePromptsDto,
 	): Promise<{ generation_id: string; merged_prompts: MergedPrompts; status: string; merged_at: string }> {
+		// 🔍 DEBUG: Log raw DTO received from frontend
+		console.log('🔍 CONTROLLER MERGE - Raw DTO:', JSON.stringify(mergePromptsDto));
+		console.log('🔍 CONTROLLER MERGE - shot_options:', JSON.stringify(mergePromptsDto?.shot_options));
+		console.log('🔍 CONTROLLER MERGE - solo:', JSON.stringify(mergePromptsDto?.shot_options?.solo));
+
 		const mergedPrompts = await this.generationsService.mergePrompts(id, user.id, {
 			model_type: mergePromptsDto?.model_type,
 			shot_options: mergePromptsDto?.shot_options,
