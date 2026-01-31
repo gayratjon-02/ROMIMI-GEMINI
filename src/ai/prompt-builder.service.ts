@@ -225,7 +225,7 @@ export class PromptBuilderService {
         // 🚀 DEFAULT TOP RULE: If product is a Bottom, model must wear a white t-shirt (Anti-Nudity)
         let baseAttire = `Wearing ${product.visual_specs.color_name} ${product.general_info.product_name}`;
         if (isProductBottom) {
-            baseAttire = `Model wearing a plain white t-shirt on upper body, fully clothed top. ${baseAttire}`;
+            baseAttire = `Wearing a plain white t-shirt on upper body, fully clothed top. ${baseAttire}`;
             this.logger.log(`👕 Anti-Nudity: Product is BOTTOM → Prepending 'White T-Shirt' to positive prompt`);
         }
 
@@ -853,7 +853,7 @@ export class PromptBuilderService {
         let subjectPart = '';
         if (modelType === 'kid') {
             // KID: Very explicit child description with negative enforcement in positive prompt
-            subjectPart = 'Subject: SINGLE CHILD MODEL (LITTLE BOY). Age 5-7 years old. Primary schooler. Small kid size. (NO ADULTS). Playful innocent expression, childlike features.';
+            subjectPart = 'KIDS FASHION. Subject: SINGLE CHILD MODEL (LITTLE BOY). Age 5-7 years old. Primary schooler. Small kid size. (NO ADULTS). Playful innocent expression, childlike features.';
         } else {
             // ADULT: Very explicit adult description with negative enforcement in positive prompt
             subjectPart = 'Subject: SINGLE ADULT MALE MODEL. Age 30s. Full adult size. (NO KIDS). Athletic build, confident gaze, light stubble beard.';
@@ -878,7 +878,9 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 4: TECHNICAL (Camera/Quality)
         // ═══════════════════════════════════════════════════════════
-        const technicalPart = `Editorial fashion photography. Medium shot. Real human skin texture, natural pose. ${qualitySuffix}`;
+        const technicalPart = modelType === 'kid'
+            ? `Kids fashion photography. Medium shot. Soft lighting, natural child pose. ${qualitySuffix}`
+            : `Editorial fashion photography. Medium shot. Real human skin texture, natural pose. ${qualitySuffix}`;
 
         // 🚀 SUBJECT FIRST - This is the key fix!
         return `${subjectPart} ${apparelPart} ${environmentPart} ${technicalPart}`;
