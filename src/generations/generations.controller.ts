@@ -229,6 +229,7 @@ export class GenerationsController {
 	 * Supports:
 	 * - Legacy: model_type applies to ALL shots
 	 * - NEW: shot_options for granular per-shot control
+	 * - Resolution and aspect_ratio for prompt quality and image shape
 	 */
 	@Post(':id/merge')
 	async mergePrompts(
@@ -239,6 +240,8 @@ export class GenerationsController {
 		const mergedPrompts = await this.generationsService.mergePrompts(id, user.id, {
 			model_type: mergePromptsDto?.model_type,
 			shot_options: mergePromptsDto?.shot_options,
+			resolution: mergePromptsDto?.resolution,
+			aspect_ratio: mergePromptsDto?.aspect_ratio,
 		});
 		return {
 			generation_id: id,

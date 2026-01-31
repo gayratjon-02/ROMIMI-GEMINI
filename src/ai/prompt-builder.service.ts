@@ -27,6 +27,8 @@ interface MergeInput {
         shot_options?: ShotOptions;
         /** Resolution for prompt quality suffix: "4K" | "2K" */
         resolution?: string;
+        /** Aspect ratio for output images: "4:5" | "1:1" | "9:16" | "16:9" */
+        aspect_ratio?: string;
     };
 }
 

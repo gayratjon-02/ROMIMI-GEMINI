@@ -44,4 +44,12 @@ export class MergePromptsDto {
 	@IsOptional()
 	@IsString()
 	resolution?: string;
+
+	/**
+	 * Aspect ratio for image output: "4:5" | "1:1" | "9:16" | "16:9"
+	 * Passed to Gemini API for image shape
+	 */
+	@IsOptional()
+	@IsString()
+	aspect_ratio?: string;
 }

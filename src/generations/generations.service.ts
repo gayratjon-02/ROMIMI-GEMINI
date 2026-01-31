@@ -886,6 +886,7 @@ export class GenerationsService {
 	 * Supports:
 	 * - Legacy: model_type applies to ALL shots
 	 * - NEW: shot_options for granular per-shot control
+	 * - Resolution and aspect_ratio for prompt quality and image shape
 	 */
 	async mergePrompts(
 		generationId: string,
@@ -893,6 +894,8 @@ export class GenerationsService {
 		input?: {
 			model_type?: 'adult' | 'kid';
 			shot_options?: import('../common/interfaces/shot-options.interface').ShotOptions;
+			resolution?: string;
+			aspect_ratio?: string;
 		}
 	): Promise<MergedPrompts> {
 		const generation = await this.generationsRepository.findOne({
@@ -932,9 +935,21 @@ export class GenerationsService {
 		}
 
 		// Use PromptBuilderService for strict deterministic templates
-		// CRITICAL: Pass resolution from generation so 4K/2K keywords are appended to prompts
-		const resolution = generation.resolution || '4K';
-		this.logger.log(`📐 Merge using resolution=${resolution} for prompt quality suffix`);
+		// CRITICAL: Prefer input values, fallback to generation entity, then defaults
+		const resolution = input?.resolution || generation.resolution || '4K';
+		const aspectRatio = input?.aspect_ratio || generation.aspect_ratio || '4:5';
+
+		// Update generation entity with latest values (in case they were passed in merge)
+		if (input?.resolution && input.resolution !== generation.resolution) {
+			generation.resolution = input.resolution;
+			this.logger.log(`📐 Updating generation.resolution to ${input.resolution}`);
+		}
+		if (input?.aspect_ratio && input.aspect_ratio !== generation.aspect_ratio) {
+			generation.aspect_ratio = input.aspect_ratio;
+			this.logger.log(`📐 Updating generation.aspect_ratio to ${input.aspect_ratio}`);
+		}
+
+		this.logger.log(`📐 Merge using resolution=${resolution}, aspect_ratio=${aspectRatio}`);
 		const generatedPrompts = this.promptBuilderService.buildPrompts({
 			product: productJSON as AnalyzeProductDirectResponse,
 			da: convertedDA,
@@ -942,6 +957,7 @@ export class GenerationsService {
 				model_type: input?.model_type || 'adult',
 				shot_options: input?.shot_options,
 				resolution,
+				aspect_ratio: aspectRatio,
 			}
 		});
 
