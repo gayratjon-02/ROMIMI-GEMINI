@@ -206,47 +206,52 @@ export class GenerationsService {
 		await this.generationsRepository.save(generation);
 
 		try {
-			// 3. Build 6 prompts using PromptBuilder
-			this.logger.log(`🏗️ Building prompts for product: ${generation.product.name}`);
+			// 3. Use merged_prompts from merge (with shot_options) when valid; otherwise rebuild
+			const promptTypes = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'] as const;
+			const existing = generation.merged_prompts as Record<string, any> | undefined;
+			const hasValidMerged = existing && promptTypes.every(t => {
+				const p = existing[t];
+				return p && (p.gemini_prompt || p.prompt);
+			});
 
-			let generatedPrompts;
+			let promptsToUse: Record<string, any>;
 
-			if (hasDAPreset) {
-				// Use DA Preset flow (Phase 3)
-				this.logger.log(`📋 Using DA Preset: ${generation.da_preset.name}`);
-				generatedPrompts = this.promptBuilderService.buildPromptsFromEntities({
+			if (hasValidMerged) {
+				this.logger.log(`📋 Using existing merged_prompts (built by merge with shot_options)`);
+				promptsToUse = existing!;
+			} else if (hasDAPreset) {
+				this.logger.log(`📋 Building prompts from DA Preset: ${generation.da_preset.name}`);
+				const generatedPrompts = this.promptBuilderService.buildPromptsFromEntities({
 					product: generation.product,
 					daPreset: generation.da_preset,
 					modelType: generation.model_type || 'adult',
 					resolution: generation.resolution,
 				});
+				promptsToUse = generatedPrompts.prompts;
+				generation.merged_prompts = promptsToUse;
 			} else {
-				// Use Collection DA flow (Legacy)
-				this.logger.log(`📋 Using Collection DA: ${generation.collection.name}`);
+				this.logger.log(`📋 Building prompts from Collection DA: ${generation.collection.name}`);
 				const productJSON = generation.product.final_product_json || generation.product.analyzed_product_json;
 				const convertedDA = this.convertCollectionDAToPresetFormat(generation.collection.analyzed_da_json, generation.collection.name);
-
-				generatedPrompts = this.promptBuilderService.buildPrompts({
+				const generatedPrompts = this.promptBuilderService.buildPrompts({
 					product: productJSON as AnalyzeProductDirectResponse,
 					da: convertedDA,
 					options: {
 						model_type: (generation.model_type as 'adult' | 'kid') || 'adult',
 						resolution: generation.resolution,
+						aspect_ratio: generation.aspect_ratio,
 					}
 				});
+				promptsToUse = generatedPrompts.prompts;
+				generation.merged_prompts = promptsToUse;
 			}
-
-			// Save prompts to generation (only the prompts field, not the wrapper)
-			generation.merged_prompts = generatedPrompts.prompts;
 			generation.current_step = 'generating_images';
 			generation.progress_percent = 10;
 			await this.generationsRepository.save(generation);
 
-			this.logger.log(`✅ Built 6 prompts. Starting image generation...`);
+			this.logger.log(`✅ Using prompts. Starting image generation...`);
 
 			// 4. Generate images for each prompt
-			// Keys match MergedPrompts interface: duo, solo, flatlay_front, flatlay_back, closeup_front, closeup_back
-			const promptTypes = ['duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'] as const;
 			const generatedImages: Record<string, string> = {};
 			const visuals: any[] = [];
 
@@ -254,8 +259,7 @@ export class GenerationsService {
 			const totalPrompts = promptTypes.length;
 
 			for (const promptType of promptTypes) {
-				// Get the MergedPromptObject and extract the prompt string
-				const promptObject = generatedPrompts.prompts[promptType];
+				const promptObject = promptsToUse[promptType];
 				// Use gemini_prompt (official field) with fallback to deprecated prompt field
 				const prompt = (promptObject.gemini_prompt || promptObject.prompt || '').trim();
 				const visualIndex = completedCount;
