@@ -41,12 +41,17 @@ export interface VisualSpecs {
 export interface DesignFront {
 	has_logo: boolean;
 	logo_text: string;
+	/** Exact font name when logo_text exists (e.g. Didot, Helvetica, Futura) */
+	font_family?: string;
 	logo_type: string;
 	logo_content: string;
 	logo_color: string;
 	placement: string;
 	description: string;
+	/** Size estimate with cm (e.g. 'Small discrete, approx. 5cm wide') */
 	size?: string;
+	/** Relative to garment: e.g. 'Occupies ~12% of chest width, ~8% of front panel height' */
+	size_relative_pct?: string;
 	micro_details?: string;
 }
 
@@ -63,8 +68,12 @@ export interface DesignBack {
 	patch_detail: string;
 	patch_shape?: string;
 	artwork_shape?: string;
+	/** Exact font name when patch contains text */
+	font_family?: string;
 	placement?: string;
 	size?: string;
+	/** Relative to garment (e.g. 'Occupies ~15% of back yoke width') */
+	size_relative_pct?: string;
 	micro_details?: string;
 }
 

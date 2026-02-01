@@ -197,7 +197,13 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
 
         const zipperText = this.checkZipperRule(product);
-        const logoTextFront = this.checkLogoRule(product.design_front.has_logo, product.design_front.logo_text, product.design_front.logo_type);
+        const logoTextFront = this.checkLogoRule(
+            product.design_front.has_logo,
+            product.design_front.logo_text,
+            product.design_front.logo_type,
+            product.design_front.font_family,
+            product.design_front.size_relative_pct
+        );
 
         // ═══════════════════════════════════════════════════════════
         // 2. BRAND GUARDIAN RULES
@@ -640,11 +646,14 @@ export class PromptBuilderService {
         return '';
     }
 
-    private checkLogoRule(hasLogo: boolean, text: string, type: string): string {
+    private checkLogoRule(hasLogo: boolean, text: string, type: string, fontFamily?: string, sizeRelative?: string): string {
         if (!hasLogo) {
             return '';
         }
-        return `Visible logo: ${text} (${type}).`;
+        let out = `Visible logo: ${text} (${type})`;
+        if (fontFamily) out += `, ${fontFamily} font`;
+        if (sizeRelative) out += `. Size: ${sizeRelative}`;
+        return out + '.';
     }
 
     // ═══════════════════════════════════════════════════════════

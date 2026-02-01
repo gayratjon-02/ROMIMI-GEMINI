@@ -190,7 +190,10 @@ export class ClaudeService {
 			this.logger.log(`🛡️ Brand Guardian: Detected 'Romimi' logo. Overriding hallucinated '${parsed.design_front.logo_type}' with 'Serif wordmark'.`);
 			parsed.design_front.logo_type = 'Serif wordmark';
 			parsed.design_front.logo_content = "Clean white 'Romimi' text in classic Serif font";
-			// Fix description if it contains "script"
+			// Ensure font_family is set (Didot/Bodoni typical for Romimi) if missing
+			if (!parsed.design_front.font_family || /^(serif|sans-serif|script)$/i.test(parsed.design_front.font_family)) {
+				parsed.design_front.font_family = parsed.design_front.font_family || 'Didot';
+			}
 			if (parsed.design_front.description) {
 				parsed.design_front.description = parsed.design_front.description.replace(/script/gi, 'classic Serif');
 			}
@@ -211,11 +214,15 @@ export class ClaudeService {
 			design_front: {
 				has_logo: parsed.design_front?.has_logo ?? false,
 				logo_text: parsed.design_front?.logo_text || 'N/A',
+				font_family: parsed.design_front?.font_family,
 				logo_type: parsed.design_front?.logo_type || '',
 				logo_content: parsed.design_front?.logo_content || '',
 				logo_color: parsed.design_front?.logo_color || '',
 				placement: parsed.design_front?.placement || '',
+				size: parsed.design_front?.size,
+				size_relative_pct: parsed.design_front?.size_relative_pct,
 				description: parsed.design_front?.description || 'Clean front design',
+				micro_details: parsed.design_front?.micro_details,
 			},
 			design_back: {
 				has_logo: parsed.design_back?.has_logo ?? false,
@@ -224,6 +231,11 @@ export class ClaudeService {
 				technique: parsed.design_back?.technique || 'N/A',
 				patch_color: parsed.design_back?.patch_color || 'N/A',
 				patch_detail: parsed.design_back?.patch_detail || 'N/A',
+				font_family: parsed.design_back?.font_family,
+				placement: parsed.design_back?.placement,
+				size: parsed.design_back?.size,
+				size_relative_pct: parsed.design_back?.size_relative_pct,
+				micro_details: parsed.design_back?.micro_details,
 			},
 			garment_details: {
 				pockets: parsed.garment_details?.pockets || 'Standard pockets',

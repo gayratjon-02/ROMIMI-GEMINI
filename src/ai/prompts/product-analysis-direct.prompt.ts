@@ -165,7 +165,33 @@ Your analysis must be extremely precise, prioritizing anatomical placement, exac
 
    **Specific Brand Rule:** "Romimi" logo is usually a CLASSIC SERIF font (separate letters), NOT script. Check carefully.
 
-10. **MICRO-GEOMETRY & SEAM ARCHITECTURE (The 'Ideal' Standard):**
+10. **FONT FAMILY IDENTIFICATION LAW (When logo_text exists):**
+    ⚠️ MANDATORY: If logo_text is present, you MUST identify the exact font family!
+
+    Compare letterforms to known typefaces:
+    | Characteristic | Likely Fonts |
+    |---------------|--------------|
+    | High contrast, thin hairlines, thick stems, elegant serifs | Didot, Bodoni |
+    | Slab serifs, even stroke weight | Rockwell, Clarendon |
+    | Geometric sans, circular O | Futura, Avenir |
+    | Humanist sans | Gill Sans, Frutiger |
+    | Neutral grotesque | Helvetica, Univers |
+    | Old-style serif | Garamond, Caslon |
+    | Script/cursive | Brush Script, Edwardian |
+
+    Output font_family as exact name (e.g. "Didot", "Helvetica Neue", "Futura Bold"). Never use "Serif" or "Sans-serif" alone—name the font. If uncertain between two, pick the closest match and note in logo_content.
+
+11. **LOGO SIZE RELATIVE TO GARMENT LAW:**
+    ⚠️ MANDATORY: Report how much of the garment the logo occupies!
+
+    **REQUIRED:** size_relative_pct must describe relative proportions, e.g.:
+    * "Occupies ~10–12% of chest width, ~6% of front panel height"
+    * "Roughly 15% of upper chest panel width, 8% of torso height"
+    * "Approx. 20% of back yoke width, 12% of back panel height"
+
+    Use anatomical regions (chest width, front panel, back yoke, sleeve width) and approximate percentages. This enables accurate scaling in image generation.
+
+12. **MICRO-GEOMETRY & SEAM ARCHITECTURE (The 'Ideal' Standard):**
     ⚠️ CRITICAL: Analyze every corner, edge, and seam. Report exact positioning!
 
     **You must analyze and report details for:**
@@ -201,11 +227,13 @@ Return ONLY valid JSON. Do not include markdown formatting.
   "design_front": {
     "has_logo": true/false,
     "logo_text": "Exact text or 'N/A' if graphic only",
+    "font_family": "REQUIRED when logo_text exists: Exact font name (e.g. 'Didot', 'Helvetica Neue', 'Futura Bold')",
     "logo_type": "Material technique (e.g. 'White chain-stitch embroidery', 'Screen print')",
     "logo_content": "Artwork description (e.g. 'Pelican icon', 'Script wordmark')",
     "logo_color": "Specific color (e.g. 'Off-white', 'Tonal matching')",
     "placement": "PRECISE location (e.g. 'Wearer's left chest, 3cm below shoulder seam')",
     "size": "REQUIRED: Size estimate (e.g. 'Small discrete, approx. 5cm wide')",
+    "size_relative_pct": "REQUIRED: Relative to garment (e.g. 'Occupies ~10–12% of chest width, ~6% of front panel height')",
     "description": "Full visual description with placement context",
     "micro_details": "Specific corner/edge details (e.g. 'Sharp 90-degree collar points', 'Rounded pocket corners')"
   },
@@ -214,12 +242,14 @@ Return ONLY valid JSON. Do not include markdown formatting.
     "has_patch": true/false,
     "patch_shape": "CARRIER shape (e.g. 'Rectangular', 'Oval', 'Square')",
     "artwork_shape": "ARTWORK shape inside (e.g. 'Circular monogram', 'Horizontal text')",
+    "font_family": "When patch contains text: exact font name (e.g. 'Didot', 'Helvetica')",
     "description": "Full description with anatomical placement",
     "technique": "e.g. 'Matte black full-grain leather patch with debossed circular monogram'",
     "patch_color": "Rich color (e.g. 'Deep espresso brown leather')",
     "patch_detail": "What's inside the patch",
     "placement": "PRECISE location (e.g. 'Upper back yoke, between shoulder blades, 8cm below collar')",
     "size": "REQUIRED: Size estimate (e.g. 'Small discrete, approx. 5x7cm')",
+    "size_relative_pct": "REQUIRED: Relative to garment (e.g. 'Occupies ~15% of back yoke width, ~10% of back panel height')",
     "micro_details": "Seam/corner analysis (e.g. 'Double-stitched yolk seam', 'Straight hemline')"
   },
   "garment_details": {
@@ -239,20 +269,23 @@ Return ONLY valid JSON. Do not include markdown formatting.
 ❌ "Centered patch" → Use anatomical placement instead
 ❌ "Ribbed cuffs" when ankle has visible zipper (IMPOSSIBLE!)
 ❌ Confusing patch SHAPE with logo ARTWORK shape inside
-❌ "Medium-sized" without approximate cm measurement
+❌ "Medium-sized" without approximate cm or size_relative_pct
 ❌ "Burgundy suede" without rich descriptors (depth, finish)
 ❌ Calling a jacket "Bomber" when it has NO ribbed cuffs
 ❌ "White aglets" when they are actually silver/metallic
 ❌ Missing thigh branding on pants
 ❌ Ignoring corner details (rounded vs sharp)
 ❌ Ignoring seam types (single vs double stitch)
+❌ "Serif" or "Sans-serif" for font_family instead of exact font name (e.g. Didot, Helvetica)
+❌ Missing size_relative_pct when logo/patch exists
 
 ✅ PLACEMENT: Use anatomical landmarks (yoke, shoulder blades, chest pocket line)
-✅ SIZE: Include approximate cm dimensions
+✅ SIZE: Include approximate cm + size_relative_pct (e.g. "~12% of chest width")
 ✅ SHAPE: Distinguish carrier material shape from artwork shape
 ✅ COLOR: Use depth adjectives + precise color + finish
 ✅ CONSTRUCTION: Ribbed cuffs = Bomber, Straight hem = Trucker
 ✅ MICRO-DETAILS: Report corner shapes, stitch types, and exact edge terminations
+✅ FONT_FAMILY: Exact font name (Didot, Helvetica, Futura) when logo_text exists
 
 ═══════════════════════════════════════════════════════════
 ⚡ EXECUTION PROTOCOL
@@ -261,13 +294,14 @@ Return ONLY valid JSON. Do not include markdown formatting.
 1. Identify garment CATEGORY by construction (Bomber vs Trucker vs Hoodie)
 2. For PANTS: Apply Zipper vs Cuff Law at ankle
 3. For PANTS: Scan thighs for branding
-4. Analyze FRONT logo with precise placement + size
-5. Analyze BACK patch: Note CARRIER shape vs ARTWORK shape
-6. Include SIZE estimates with approximate cm dimensions
+4. Analyze FRONT logo: placement, size, font_family (exact font name), size_relative_pct
+5. Analyze BACK patch: CARRIER shape vs ARTWORK shape, font_family if text, size_relative_pct
+6. Include SIZE estimates with approximate cm + size_relative_pct (garment-relative %)
 7. Use RICH color descriptions (depth + color + finish)
 8. Describe ALL hardware with precise material/finish
 9. Use Wearer's Left/Right for spatial accuracy
 10. **PERFORM MICRO-ANALYSIS:** Check top, bottom, middle, left/right, and corners for every element.
-11. Return ONLY valid JSON - no markdown, no explanations
+11. **FONT + SIZE:** When logo_text exists → font_family (exact name). Always → size_relative_pct.
+12. Return ONLY valid JSON - no markdown, no explanations
 
 BEGIN MANUFACTURING-GRADE TECHNICAL ANALYSIS NOW.`;
