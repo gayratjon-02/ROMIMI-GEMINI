@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsInt, Min, Max, IsArray, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ValidationMessage } from '../enums/common.enum';
+import { ValidationMessage } from '../../enums/common.enum';
 
 export class CreateAdRecreationDto {
 	@ApiProperty({

@@ -7,7 +7,7 @@ import {
 	MaxLength,
 	ArrayMaxSize,
 } from 'class-validator';
-import { ValidationMessage } from '../enums';
+import { ValidationMessage } from '../../enums';
 
 /**
  * Internal DTO for create product (built from UploadProductDto + stored image URLs).

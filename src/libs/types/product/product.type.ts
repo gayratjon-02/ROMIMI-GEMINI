@@ -4,7 +4,7 @@
 
 import { AnalyzedProductJSON } from "src/common/interfaces/product-json.interface";
 import { Product } from "src/database/entities/product.entity";
-import { AnalyzeProductDirectResponse } from "src/libs/dto/analyze-product-direct.dto";
+import { AnalyzeProductDirectResponse } from "src/libs/dto/analyze/analyze-product-direct.dto";
 
 export interface ProductResponse {
 	success: boolean;

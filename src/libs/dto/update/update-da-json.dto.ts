@@ -1,5 +1,5 @@
 import { IsObject, IsOptional } from 'class-validator';
-import { AnalyzedDAJSON, FixedElements } from '../../common/interfaces/da-json.interface';
+import { AnalyzedDAJSON, FixedElements } from '../../../common/interfaces/da-json.interface';
 
 export class UpdateDAJsonDto {
 	@IsObject()

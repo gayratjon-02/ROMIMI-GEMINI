@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, IsIn } from 'class-validator';
-import { GenerationType, ValidationMessage } from '../enums';
+import { GenerationType, ValidationMessage } from '../../enums';
 
 export class CreateGenerationDto {
 	@IsUUID('4', { message: ValidationMessage.FIELD_INVALID })

@@ -29,8 +29,8 @@ import { MergedPrompts } from '../common/interfaces/merged-prompts.interface';
 import { AnalyzedProductJSON } from '../common/interfaces/product-json.interface';
 import { AnalyzedDAJSON } from '../common/interfaces/da-json.interface';
 import { PromptBuilderService } from '../ai/prompt-builder.service';
-import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct.dto';
-import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
+import { AnalyzeProductDirectResponse } from '../libs/dto/analyze/analyze-product-direct.dto';
+import { AnalyzeDAPresetResponse } from '../libs/dto/analyze/analyze-da-preset.dto';
 
 type GenerationFilters = {
 	product_id?: string;

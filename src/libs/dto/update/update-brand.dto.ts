@@ -1,5 +1,5 @@
 import { IsString, IsOptional } from 'class-validator';
-import { ValidationMessage } from '../enums';
+import { ValidationMessage } from '../../enums';
 
 export class UpdateBrandDto {
 	@IsString({ message: ValidationMessage.FIELD_INVALID })

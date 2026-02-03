@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { ClaudeService } from '../ai/claude.service';
 import { FilesService } from '../files/files.service';
 import { DAPreset, DAPresetConfig } from '../database/entities/da-preset.entity';
-import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
+import { AnalyzeDAPresetResponse } from '../libs/dto/analyze/analyze-da-preset.dto';
 
 @Injectable()
 export class DAService {

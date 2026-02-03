@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ValidationMessage } from '../enums';
+import { ValidationMessage } from '../../enums';
 
 export class CreateBrandDto {
 	@ApiProperty({

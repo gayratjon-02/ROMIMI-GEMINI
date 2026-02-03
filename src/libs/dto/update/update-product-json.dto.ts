@@ -1,5 +1,5 @@
 import { IsObject, IsOptional } from 'class-validator';
-import { AnalyzedProductJSON } from '../../common/interfaces/product-json.interface';
+import { AnalyzedProductJSON } from '../../../common/interfaces/product-json.interface';
 
 export class UpdateProductJsonDto {
 	@IsObject()

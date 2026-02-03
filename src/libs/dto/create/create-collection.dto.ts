@@ -1,27 +1,31 @@
 import {
+	IsNotEmpty,
 	IsOptional,
 	IsString,
 	IsUUID,
 	IsObject,
 	ValidateNested,
-	IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ValidationMessage } from '../enums';
-import { FixedElementsDto } from './fixed-elements.dto';
+import { ValidationMessage } from '../../enums';
+import { FixedElementsDto } from '../fixed-elements.dto';
 
-export class UpdateCollectionDto {
+export class CreateCollectionDto {
 	@IsString({ message: ValidationMessage.FIELD_INVALID })
-	@IsOptional()
-	name?: string;
+	@IsNotEmpty({ message: ValidationMessage.FIELD_REQUIRED })
+	name: string;
 
 	@IsUUID('4', { message: ValidationMessage.FIELD_INVALID })
-	@IsOptional()
-	brand_id?: string;
+	@IsNotEmpty({ message: ValidationMessage.FIELD_REQUIRED })
+	brand_id: string;
 
-	@IsString({ message: ValidationMessage.FIELD_INVALID })
+	@IsString()
 	@IsOptional()
-	da_reference_image_url?: string;
+	code?: string;
+
+	@IsString()
+	@IsOptional()
+	description?: string;
 
 	@ValidateNested()
 	@Type(() => FixedElementsDto)

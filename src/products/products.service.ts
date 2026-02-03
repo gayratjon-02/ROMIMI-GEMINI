@@ -12,14 +12,12 @@ import { Generation } from '../database/entities/generation.entity';
 import { ClaudeService } from '../ai/claude.service';
 import { CreateProductDto, UpdateProductDto } from '../libs/dto';
 import {
+	FileMessage,
 	NotFoundMessage,
 	PermissionMessage,
-	FileMessage,
-	GenerationType,
-	GenerationStatus,
 } from '../libs/enums';
 import { AnalyzedProductJSON } from '../common/interfaces/product-json.interface';
-import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct.dto';
+import { AnalyzeProductDirectResponse } from '../libs/dto/analyze/analyze-product-direct.dto';
 
 @Injectable()
 export class ProductsService {
@@ -33,12 +31,13 @@ export class ProductsService {
 		private readonly claudeService: ClaudeService,
 	) { }
 
-	/**
-	 * Create Product (client workflow: CREATE step).
-	 * Stores name + front/back/reference image URLs only. No analysis.
-	 * Use POST /api/products/:id/analyze after create to get Product JSON.
-	 */
+
+	// start****************************************************
+	// create product
 	async create(userId: string, createProductDto: CreateProductDto): Promise<Product> {
+
+
+		// validate collection
 		const collection = await this.collectionsRepository.findOne({
 			where: { id: createProductDto.collection_id },
 			relations: ['brand'],
@@ -51,8 +50,7 @@ export class ProductsService {
 		if (!collection.brand || collection.brand.user_id !== userId) {
 			throw new ForbiddenException(PermissionMessage.NOT_OWNER);
 		}
-
-		const product = this.productsRepository.create({
+		const result = {
 			name: createProductDto.name,
 			collection_id: createProductDto.collection_id,
 			brand_id: collection.brand.id,
@@ -62,11 +60,17 @@ export class ProductsService {
 			reference_images: createProductDto.reference_images?.length
 				? createProductDto.reference_images
 				: null,
-		});
+		}
+		console.log("RESULT", result);
+
+		const product = this.productsRepository.create(result);
+		console.log("PRODUCT", product);
 
 		return this.productsRepository.save(product);
 	}
 
+
+	
 	async findAll(
 		userId: string,
 		filters: { collection_id?: string; page?: number; limit?: number },

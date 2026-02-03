@@ -15,9 +15,6 @@ export class AnalyzeProductDirectDto {
 	product_name?: string;
 }
 
-/**
- * General product information
- */
 export interface GeneralInfo {
 	product_name: string;
 	category: string;
@@ -25,19 +22,12 @@ export interface GeneralInfo {
 	gender_target: string;
 }
 
-/**
- * Visual specifications
- */
 export interface VisualSpecs {
 	color_name: string;
 	hex_code: string;
 	fabric_texture: string;
 }
 
-/**
- * Front design details
- * Includes anti-hallucination fields for accurate logo detection
- */
 export interface DesignFront {
 	has_logo: boolean;
 	logo_text: string;

@@ -17,3 +17,14 @@ export const VALID_ASPECT_RATIOS = [
 
 // Valid image sizes for Gemini 3 Pro Image Preview
 export const VALID_IMAGE_SIZES = ['1K', '2K', '4K'] as const;
+
+
+
+
+export const FILE_SIZE_LIMIT = { fileSize: 30 * 1024 * 1024 }; // 30MB
+
+export const FRONT_BACK_REFERENCE_IMAGES = [
+	{ name: 'front_images', maxCount: 5 },
+	{ name: 'back_images', maxCount: 5 },
+	{ name: 'reference_images', maxCount: 10 },
+]

@@ -20,7 +20,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { User } from '../database/entities/user.entity';
 import { DAPreset, DAPresetConfig } from '../database/entities/da-preset.entity';
 import { FilesService } from '../files/files.service';
-import { AnalyzeDAPresetDto, AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
+import { AnalyzeDAPresetDto, AnalyzeDAPresetResponse } from '../libs/dto/analyze/analyze-da-preset.dto';
 
 /**
  * Save Preset DTO

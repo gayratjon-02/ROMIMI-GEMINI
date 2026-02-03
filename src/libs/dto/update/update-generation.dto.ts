@@ -1,5 +1,5 @@
 import { IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
-import { GenerationType, ValidationMessage } from '../enums';
+import { GenerationType, ValidationMessage } from '../../enums';
 
 export class UpdateGenerationDto {
 	@IsEnum(GenerationType, { message: ValidationMessage.FIELD_INVALID })

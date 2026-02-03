@@ -16,8 +16,8 @@ import { DA_REFERENCE_ANALYSIS_PROMPT } from './prompts/da-reference-analysis.pr
 import { AnalyzedProductJSON } from '../common/interfaces/product-json.interface';
 import { AnalyzedDAJSON } from '../common/interfaces/da-json.interface';
 import { MergedPrompts } from '../common/interfaces/merged-prompts.interface';
-import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct.dto';
-import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
+import { AnalyzeProductDirectResponse } from '../libs/dto/analyze/analyze-product-direct.dto';
+import { AnalyzeDAPresetResponse } from '../libs/dto/analyze/analyze-da-preset.dto';
 import { AnalyzeCompetitorAdInput, AnalyzeProductDirectInput, AnalyzeProductInput, ClaudeContentBlock, ClaudeImageMediaType, GeneratePromptsInput } from 'src/libs/types/claude/claude.type';
 
 
@@ -72,14 +72,8 @@ export class ClaudeService {
 		return result;
 	}
 
-	/**
-	 * Direct product analysis from uploaded images
-	 * Used by POST /api/products/analyze endpoint
-	 * Returns comprehensive JSON structure for frontend
-	 *
-	 * Input: Up to 12 images (front + back + reference)
-	 * Output: Single Product JSON with general_info, visual_specs, design_front, design_back, garment_details
-	 */
+	// start****************************************************
+	// analyze product direct
 	async analyzeProductDirect(input: AnalyzeProductDirectInput): Promise<AnalyzeProductDirectResponse> {
 		// At least one front OR back image is required
 		if (!input.frontImages?.length && !input.backImages?.length) {
@@ -254,17 +248,7 @@ export class ClaudeService {
 		return result;
 	}
 
-	/**
-	 * Analyze DA Reference image and return DAPreset-compatible JSON
-	 * Used by POST /api/da/analyze endpoint
-	 *
-	 * This method reverse-engineers a reference image into a structured
-	 * DAPreset format that can be saved to the database or used for generation.
-	 *
-	 * @param imageUrl - URL or path to the reference image
-	 * @param presetName - Optional custom name for the preset
-	 * @returns AnalyzeDAPresetResponse - Structured DA preset data
-	 */
+
 	async analyzeDAForPreset(imageUrl: string, presetName?: string): Promise<AnalyzeDAPresetResponse> {
 		if (!imageUrl) {
 			throw new BadRequestException(FileMessage.FILE_NOT_FOUND);
@@ -322,10 +306,7 @@ export class ClaudeService {
 		return result;
 	}
 
-	/**
-	 * Validate and normalize HEX color code
-	 * Returns null if invalid, otherwise returns properly formatted #XXXXXX
-	 */
+
 	private validateHexColor(hex: string | undefined): string | null {
 		if (!hex) return null;
 
@@ -849,10 +830,6 @@ Generate the 6 merged prompts now. Return ONLY valid JSON object with the struct
 		return lines.join('\n');
 	}
 
-	/**
-	 * Compress image if it exceeds Claude's 5MB limit
-	 * Target: Keep under 4.5MB to leave safety buffer
-	 */
 	private async compressImageIfNeeded(buffer: Buffer, mediaType: ClaudeImageMediaType): Promise<{ data: string; mediaType: ClaudeImageMediaType }> {
 		const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 		const TARGET_SIZE = 4.5 * 1024 * 1024; // 4.5MB target to leave buffer

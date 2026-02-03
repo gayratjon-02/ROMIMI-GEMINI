@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
-import { ValidationMessage } from '../enums';
+import { ValidationMessage } from '../../enums';
 
 export class UpdatePromptTemplatesDto {
 	@IsObject({ message: ValidationMessage.FIELD_INVALID })

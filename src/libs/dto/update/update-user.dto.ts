@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEmail, IsBoolean } from 'class-validator';
-import { ValidationMessage } from '../enums';
+import { ValidationMessage } from '../../enums';
 
 export class UpdateUserDto {
 	@IsEmail({}, { message: ValidationMessage.EMAIL_INVALID })

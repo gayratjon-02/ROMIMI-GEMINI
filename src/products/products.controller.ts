@@ -24,6 +24,7 @@ import { User } from '../database/entities/user.entity';
 import { Product } from '../database/entities/product.entity';
 import { FilesService } from '../files/files.service';
 import { ProductAnalysisResponse, ProductJsonResponse, ProductListResponse, ProductResponse } from 'src/libs/types/product/product.type';
+import { FILE_SIZE_LIMIT, FRONT_BACK_REFERENCE_IMAGES } from 'src/libs/config';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard)
@@ -33,12 +34,6 @@ export class ProductsController {
 		private readonly filesService: FilesService,
 	) { }
 
-	/**
-	 * Create Product (client workflow step 3)
-	 * POST /api/products
-	 * FormData: name, collection_id, front_image (required), back_image (optional), reference_images[] (optional, up to 12).
-	 * No analysis at create — use POST /api/products/:id/analyze after.
-	 */
 	@Post()
 	@UseInterceptors(
 		FileFieldsInterceptor(
@@ -87,25 +82,17 @@ export class ProductsController {
 		return this.productsService.create(user.id, createProductDto);
 	}
 
-	/**
-	 * STEP 1: Analyze Product Images Directly
-	 * POST /api/products/analyze
-	 * FormData: front_images[] (required), back_images[] (optional), reference_images[] (optional, max 10)
-	 * Creates product record and returns analyzed product JSON
-	 */
+
 	@Post('analyze')
 	@UseInterceptors(
 		FileFieldsInterceptor(
-			[
-				{ name: 'front_images', maxCount: 5 },
-				{ name: 'back_images', maxCount: 5 },
-				{ name: 'reference_images', maxCount: 10 },
-			],
+			FRONT_BACK_REFERENCE_IMAGES,
 			{
-				limits: { fileSize: 30 * 1024 * 1024 }, // 30MB per file
+				limits: FILE_SIZE_LIMIT // 30MB per file
 			},
 		),
 	)
+	
 	async analyzeProductDirect(
 		@CurrentUser() user: User,
 		@Body() analyzeProductDirectDto: AnalyzeProductDirectDto,
