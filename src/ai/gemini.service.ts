@@ -115,8 +115,9 @@ export class GeminiService {
 
 		const sanitizedPrompt = this.sanitizePromptForImageGeneration(prompt);
 
-		// Enhanced prompt: STRICT—render exactly as specified, no additions, no deviations
+		// Enhanced prompt: STRICT—render exactly as specified; models MUST be fully clothed
 		const enhancedPrompt = `Render EXACTLY as specified. Do NOT add, remove, or change any element. 100% match to the product specification. No creative additions.
+CRITICAL: Any human models must be FULLY CLOTHED. NEVER shirtless, bare-chested, or topless.
 
 Professional e-commerce product photography: ${sanitizedPrompt}.
 High quality studio lighting, sharp details, clean background.`;
@@ -146,10 +147,10 @@ High quality studio lighting, sharp details, clean background.`;
 					responseModalities: ['TEXT', 'IMAGE'], // CRITICAL: Force image generation
 					imageConfig,
 					safetySettings: [
-						{ category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-						{ category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-						{ category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-						{ category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+						{ category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 					]
 				}
 			});
@@ -181,6 +182,12 @@ High quality studio lighting, sharp details, clean background.`;
 			if (parts.length === 0) {
 				this.logger.error(`❌ CRITICAL: No parts in Gemini response!`);
 				this.logger.error(`Candidate:`, JSON.stringify(candidate, null, 2));
+				const finishReason = (candidate as any).finishReason || (candidate as any).finish_reason;
+				if (finishReason === 'IMAGE_SAFETY' || finishReason === 'SAFETY') {
+					throw new GeminiGenerationError(
+						'Image generation was blocked by platform safety policy. For DUO (Father+Son) or child model shots, the platform may block generation. Try SOLO (Adult) or FLAT LAY shots instead.'
+					);
+				}
 				throw new GeminiGenerationError('Gemini returned no parts');
 			}
 

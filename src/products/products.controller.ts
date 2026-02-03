@@ -23,47 +23,7 @@ import { AnalyzedProductJSON } from '../common/interfaces/product-json.interface
 import { User } from '../database/entities/user.entity';
 import { Product } from '../database/entities/product.entity';
 import { FilesService } from '../files/files.service';
-
-// ═══════════════════════════════════════════════════════════════════════════
-// RESPONSE INTERFACES - Consistent API Response Format
-// ═══════════════════════════════════════════════════════════════════════════
-
-interface ProductResponse {
-	success: boolean;
-	product: Product;
-	message?: string;
-}
-
-interface ProductListResponse {
-	success: boolean;
-	items: Product[];
-	total: number;
-	page: number;
-	limit: number;
-}
-
-interface ProductAnalysisResponse {
-	success: boolean;
-	product_id: string;
-	name: string;
-	category: string;
-	analysis: AnalyzeProductDirectResponse;
-	imageUrl: string;
-	front_image_url?: string;
-	back_image_url?: string;
-	reference_images?: string[];
-	message: string;
-	next_step: string;
-}
-
-interface ProductJsonResponse {
-	success: boolean;
-	product_id: string;
-	analyzed_product_json: AnalyzedProductJSON | null;
-	final_product_json: AnalyzedProductJSON | null;
-	has_manual_overrides: boolean;
-	message?: string;
-}
+import { ProductAnalysisResponse, ProductJsonResponse, ProductListResponse, ProductResponse } from 'src/libs/types/product/product.type';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard)

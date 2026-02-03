@@ -280,10 +280,8 @@ export class PromptBuilderService {
         const GLOBAL_NEGATIVE_PROMPT = 'collage, split screen, inset image, picture in picture, multiple views, overlay, montage, composite image, promotional material, text blocks, watermarks, border, frame, padding, white background';
         let negativePrompt = `${GLOBAL_NEGATIVE_PROMPT}, text, watermark, blurry, low quality, distorted, extra limbs, bad anatomy, mannequin, ghost mannequin, floating clothes, 3d render, artificial face, deformed hands, extra fingers`;
 
-        // 🚀 ANTI-NUDITY SHIELD: If product is a Bottom, block shirtless models aggressively
-        if (isProductBottom) {
-            negativePrompt += ', shirtless, naked torso, bare chest, abs, muscles, underwear model, swimwear, skin showing, topless, navel';
-        }
+        // 🚀 ANTI-NUDITY SHIELD: ALWAYS block shirtless for human model shots (duo, solo)
+        negativePrompt += ', shirtless, naked torso, bare chest, bare skin, abs showing, muscles exposed, underwear model, swimwear, skin showing, topless, navel, exposed torso, no shirt';
 
         // ═══════════════════════════════════════════════════════════
         // 6. GENERATE 6 SHOT PROMPTS (MergedPromptObject format)
@@ -806,18 +804,17 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 1: SUBJECT FIRST (Most Important!)
         // ═══════════════════════════════════════════════════════════
-        const subjectPart = 'FATHER AND SON. An adult MAN (30s, athletic build, confident) standing with his young BOY (age 5-7, cute child). Both looking at camera. Family moment.';
+        const subjectPart = 'FATHER AND SON. Two male models - one adult man (30s, athletic build), one younger male. Intergenerational family fashion editorial. Both looking at camera. BOTH FULLY CLOTHED, NEVER SHIRTLESS.';
 
         // ═══════════════════════════════════════════════════════════
-        // 🎯 PRIORITY 2: APPAREL (What they're wearing)
+        // 🎯 PRIORITY 2: APPAREL (What they're wearing) - USE baseAttire (includes t-shirt when product is bottom!)
         // ═══════════════════════════════════════════════════════════
         const detailsPart = [
             product.design_front.micro_details ? `Details: ${product.design_front.micro_details}` : '',
             product.garment_details.seam_architecture ? `Construction: ${product.garment_details.seam_architecture}` : ''
         ].filter(Boolean).join('. ');
 
-        const apparelPart = `Both wearing matching ${product.visual_specs.color_name} ${product.general_info.category}. ` +
-            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${zipperText}`;
+        const apparelPart = `Both ${baseAttire}. Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${zipperText}. Fully clothed, shirts on, no bare chest.`;
 
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 3: ENVIRONMENT (Where)
@@ -862,7 +859,7 @@ export class PromptBuilderService {
         let subjectPart = '';
         if (modelType === 'kid') {
             // KID: Very explicit child description with negative enforcement in positive prompt
-            subjectPart = 'KIDS FASHION. Subject: SINGLE CHILD MODEL (LITTLE BOY). Age 5-7 years old. Primary schooler. Small kid size. (NO ADULTS). Playful innocent expression, childlike features.';
+            subjectPart = 'KIDS FASHION. Subject: SINGLE YOUNG MALE MODEL. Youth sizing. (NO ADULTS). Playful editorial expression.';
         } else {
             // ADULT: Very explicit adult description with negative enforcement in positive prompt
             subjectPart = 'Subject: SINGLE ADULT MALE MODEL. Age 30s. Full adult size. (NO KIDS). Athletic build, confident gaze, light stubble beard.';
@@ -877,7 +874,7 @@ export class PromptBuilderService {
         ].filter(Boolean).join('. ');
 
         const apparelPart = `${baseAttire}. ` +
-            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${logoTextFront}. ${zipperText}`;
+            `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}. ${detailsPart}. ${logoTextFront}. ${zipperText}. Fully clothed, never shirtless.`;
 
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 3: ENVIRONMENT (Where)

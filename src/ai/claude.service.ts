@@ -18,44 +18,8 @@ import { AnalyzedDAJSON } from '../common/interfaces/da-json.interface';
 import { MergedPrompts } from '../common/interfaces/merged-prompts.interface';
 import { AnalyzeProductDirectResponse } from '../libs/dto/analyze-product-direct.dto';
 import { AnalyzeDAPresetResponse } from '../libs/dto/analyze-da-preset.dto';
+import { AnalyzeCompetitorAdInput, AnalyzeProductDirectInput, AnalyzeProductInput, ClaudeContentBlock, ClaudeImageMediaType, GeneratePromptsInput } from 'src/libs/types/claude/claude.type';
 
-type AnalyzeProductDirectInput = {
-	frontImages?: string[];
-	backImages?: string[];
-	referenceImages?: string[];
-	productName?: string;
-};
-
-type AnalyzeProductInput = {
-	images: string[];
-	productName?: string;
-	brandBrief?: string;
-	notes?: string;
-};
-
-type GeneratePromptsInput = {
-	productName?: string;
-	brandBrief?: string;
-	extractedVariables?: Record<string, any>;
-	fixedElements?: Record<string, any>;
-	promptTemplates?: Record<string, any>;
-	count?: number;
-};
-
-type AnalyzeCompetitorAdInput = {
-	image: string;
-	brandBrief?: string;
-	notes?: string;
-};
-
-type ClaudeImageMediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
-
-type ClaudeContentBlock =
-	| { type: 'text'; text: string }
-	| {
-		type: 'image';
-		source: { type: 'base64'; media_type: ClaudeImageMediaType; data: string };
-	};
 
 @Injectable()
 export class ClaudeService {

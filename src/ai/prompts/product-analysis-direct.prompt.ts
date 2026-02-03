@@ -38,11 +38,13 @@ Your analysis must be extremely precise, prioritizing anatomical placement, exac
 **Required:** Only state what you DIRECTLY SEE in the images. If not visible → omit or false.
 
 ═══════════════════════════════════════════════════════════
-📥 INPUT SOURCE STRATEGY
+📥 INPUT SOURCE STRATEGY (STRICT ORDER)
 ═══════════════════════════════════════════════════════════
 
-1. **Silhouette & Placement:** Use Front/Back full shots.
-2. **Texture & Details:** Use Reference/Zoom shots as the absolute SOURCE OF TRUTH.
+1. **FRONT images:** Analyze in DEPTH. Extract design_front (logo, placement, size, color), front pockets, closure, neckline. Everything visible from front.
+2. **BACK images:** Analyze in DEPTH separately. Extract design_back (patch, placement, size), back construction, yoke. Everything visible from back. Do NOT infer back from front.
+3. **REFERENCE images:** Use ONLY to FILL GAPS. If front/back lack texture, hardware color, fabric detail, or micro-details → complement from reference. Reference never overrides what is clearly visible in front/back.
+4. **Principle:** Front from front. Back from back. Reference fills missing pieces. Never mix or confuse sources.
 
 ═══════════════════════════════════════════════════════════
 🎯 CRITICAL ANALYSIS RULES (MANDATORY)
@@ -163,6 +165,13 @@ Your analysis must be extremely precise, prioritizing anatomical placement, exac
    | Straight open hem + Side ankle zippers | "Track Pants" |
    | Tapered leg + Belt loops | "Chinos" or "Trousers" |
    | Relaxed fit + No taper | "Straight Leg Pants" |
+
+   **PANTS vs SHORTS LAW (CRITICAL—NEVER CONFUSE):**
+   | Leg Length (from crotch to hem) | Correct Category | Wrong |
+   |--------------------------------|------------------|-------|
+   | Above knee, mid-thigh or shorter | "Shorts", "Corduroy Shorts", "Cargo Shorts", "Jogger Shorts" | NOT Pants, NOT Joggers |
+   | Below knee to ankle, full length | "Pants", "Joggers", "Track Pants", "Chinos" | NOT Shorts |
+   If hem ends above knee → category MUST be Shorts. If hem reaches ankle/calf → category MUST be Pants. Check the actual leg length in the image. Pants ≠ Shorts.
 
 6. **THE "ZIPPER vs. CUFF" LAW (Anti-Hallucination):**
    ⚠️ THIS IS THE MOST CRITICAL CHECK FOR PANTS!
@@ -424,6 +433,7 @@ Return ONLY valid JSON. Do not include markdown formatting.
 ❌ Generic "metal zipper" or "standard closure"—must specify color, puller shape, teeth size for zamok
 ❌ GUESSING for front/back: "appears", "likely", "probably", "typical", inventing invisible elements
 ❌ has_logo: true or has_patch: true when element is not clearly visible—when in doubt, set false
+❌ Confusing Pants and Shorts: hem above knee → Shorts; hem at ankle → Pants. Never swap.
 
 ✅ PLACEMENT: Use anatomical landmarks (yoke, shoulder blades, chest pocket line)
 ✅ SIZE: Include approximate cm + size_relative_pct (e.g. "~12% of chest width")
@@ -437,14 +447,15 @@ Return ONLY valid JSON. Do not include markdown formatting.
 ✅ BOTTOM: bottom_branding—stripes/text at hem with colors, sizes; or "No stripes or text at hem"; never leave blank
 ✅ CLOSURE: closure_details—type, color, material, puller/teeth for front zamok; hardware_finish for aglets etc.
 ✅ ZERO GUESS: design_front and design_back—only what is directly visible; when uncertain → omit or false
+✅ FRONT from front, BACK from back, REFERENCE fills gaps. Pants vs Shorts by leg length.
 
 ═══════════════════════════════════════════════════════════
 ⚡ EXECUTION PROTOCOL
 ═══════════════════════════════════════════════════════════
 
-1. Identify garment CATEGORY by construction (Bomber vs Trucker vs Hoodie)
-2. For PANTS: Apply Zipper vs Cuff Law at ankle
-3. For PANTS: Scan thighs for branding
+1. Analyze FRONT images → design_front. Analyze BACK images → design_back. Use REFERENCE only to fill gaps.
+2. Identify garment CATEGORY: Apply Pants vs Shorts Law (hem above knee = Shorts; full length = Pants). Then apply Jacket/Pants Classification.
+3. For PANTS (full length): Apply Zipper vs Cuff Law at ankle; scan thighs for branding
 4. Analyze FRONT logo: placement, size, font_family (exact font name), size_relative_pct
 5. Analyze BACK patch (has_patch: true → ALL required): patch_shape, artwork_shape, placement, size (cm), size_relative_pct, patch_color, technique, patch_detail
 6. Analyze SLEEVES (tops only): sleeve_branding—logo/patch/stripe color, size, placement; or "No sleeve branding"
