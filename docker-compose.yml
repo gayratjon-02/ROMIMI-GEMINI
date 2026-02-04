@@ -4,7 +4,7 @@ services:
     build: .
     restart: always
     env_file:
-      - .env.production
+      - .env
     ports:
       - "4001:5001"               # SERVER:CONTAINER - Backend runs on 5001 inside, exposed on 4001
     environment:

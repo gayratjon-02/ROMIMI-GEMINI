@@ -14,9 +14,9 @@ echo "🚀 ROMIMI Backend Docker deployment boshlandi..."
 
 cd "$(dirname "$0")"
 
-if [ ! -f ".env.production" ]; then
-    echo "❌ .env.production fayli topilmadi!"
-    echo "Iltimos .env.production faylini yarating va barcha o'zgaruvchilarni to'ldiring"
+if [ ! -f ".env" ]; then
+    echo "❌ .env fayli topilmadi!"
+    echo "Iltimos .env faylini yarating va barcha o'zgaruvchilarni to'ldiring"
     exit 1
 fi
 
@@ -36,7 +36,7 @@ echo "📊 Container'lar holati:"
 docker compose ps
 
 echo "✅ Backend deployment yakunlandi!"
-echo "🌐 Backend http://localhost:5031 da ishlamoqda"
+echo "🌐 Backend http://localhost:4001 da ishlamoqda"
 echo ""
 echo "📝 Foydali buyruqlar:"
 echo "   docker compose logs -f romimi-backend  - Backend log'larini ko'rish"
