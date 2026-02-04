@@ -163,8 +163,30 @@ export class PromptBuilderService {
             da_name: daConfig.da_name,
             background: daConfig.background,
             floor: daConfig.floor,
-            props: daConfig.props,
-            styling: daConfig.styling,
+            // V2: Convert legacy props to ground structure
+            ground: {
+                left_items: (daConfig.props?.left_side || []).map((name: string) => ({
+                    name,
+                    surface: 'on_floor',
+                    height_level: 'middle',
+                    color: 'N/A',
+                    material: 'N/A',
+                })),
+                right_items: (daConfig.props?.right_side || []).map((name: string) => ({
+                    name,
+                    surface: 'on_floor',
+                    height_level: 'middle',
+                    color: 'N/A',
+                    material: 'N/A',
+                })),
+            },
+            // V2: adult/kid styling
+            styling: {
+                adult_bottom: daConfig.styling.pants,
+                adult_feet: daConfig.styling.footwear,
+                pants: daConfig.styling.pants,
+                footwear: daConfig.styling.footwear,
+            },
             lighting: daConfig.lighting,
             mood: daConfig.mood,
             quality: daConfig.quality,
@@ -250,9 +272,15 @@ export class PromptBuilderService {
             this.logger.log(`👖 Category Detection: Product "${product.general_info.category}" is a BOTTOM → skipping DA pants`);
         }
 
-        // Props (handle empty arrays gracefully)
-        const leftProps = da.props.left_side.length > 0 ? da.props.left_side.join(', ') : 'minimal decor';
-        const rightProps = da.props.right_side.length > 0 ? da.props.right_side.join(', ') : 'minimal decor';
+        // V2: Ground items (handle both legacy props and new ground structure)
+        const leftItems = da.ground?.left_items || [];
+        const rightItems = da.ground?.right_items || [];
+        const leftProps = leftItems.length > 0
+            ? leftItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ')
+            : 'minimal decor';
+        const rightProps = rightItems.length > 0
+            ? rightItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ')
+            : 'minimal decor';
         const scene = `${da.background.type}, ${da.floor.type}. Props: ${leftProps} on the left, ${rightProps} on the right`;
         const propsText = `${leftProps}, ${rightProps}`;
 

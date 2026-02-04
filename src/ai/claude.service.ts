@@ -311,6 +311,7 @@ export class ClaudeService {
                     material: validatedData.garment_details.shoulder_construction.material,
                     width: validatedData.garment_details.shoulder_construction.width,
                     length: validatedData.garment_details.shoulder_construction.length,
+                    proportion_of_shoulder: validatedData.garment_details.shoulder_construction.proportion_of_shoulder,
                     extends_from: validatedData.garment_details.shoulder_construction.extends_from,
                     extends_to: validatedData.garment_details.shoulder_construction.extends_to,
                     both_shoulders: validatedData.garment_details.shoulder_construction.both_shoulders,
@@ -346,14 +347,15 @@ export class ClaudeService {
             throw new BadRequestException(FileMessage.FILE_NOT_FOUND);
         }
 
+        // V2: Use new DA_REFERENCE_ANALYSIS_PROMPT with ground items, 3500K warm, adult/kid styling
         const content: ClaudeContentBlock[] = [
-            { type: 'text', text: DA_ANALYSIS_PROMPT },
+            { type: 'text', text: DA_REFERENCE_ANALYSIS_PROMPT },
             ...(await this.buildImageBlocks([imageUrl])),
         ];
 
         const response = await this.createMessage({
             content,
-            max_tokens: 2000,
+            max_tokens: 3000, // V2: Increased for more detailed ground items
         });
 
         const text = this.extractText(response.content);
@@ -364,7 +366,7 @@ export class ClaudeService {
             throw new InternalServerErrorException('Failed to parse DA analysis');
         }
 
-        // Add analyzed_at timestamp
+        // V2: Add analyzed_at timestamp and normalize structure
         const result: AnalyzedDAJSON = {
             ...parsed,
             analyzed_at: new Date().toISOString(),
@@ -399,7 +401,7 @@ export class ClaudeService {
             throw new InternalServerErrorException('Failed to parse DA reference analysis');
         }
 
-        // Validate and ensure all required fields exist with proper structure
+        // V2: Validate and ensure all required fields exist with proper structure
         const result: AnalyzeDAPresetResponse = {
             da_name: presetName || parsed.da_name || 'Analyzed Reference',
             background: {
@@ -410,17 +412,24 @@ export class ClaudeService {
                 type: parsed.floor?.type || 'Neutral floor',
                 hex: this.validateHexColor(parsed.floor?.hex) || '#A9A9A9',
             },
-            props: {
-                left_side: Array.isArray(parsed.props?.left_side) ? parsed.props.left_side : [],
-                right_side: Array.isArray(parsed.props?.right_side) ? parsed.props.right_side : [],
+            // V2: Ground items with exact positions
+            ground: {
+                left_items: this.parseGroundItems(parsed.ground?.left_items || parsed.props?.left_side),
+                right_items: this.parseGroundItems(parsed.ground?.right_items || parsed.props?.right_side),
             },
+            // V2: Styling with adult/kid split
             styling: {
-                pants: parsed.styling?.bottom ?? parsed.styling?.pants ?? 'Black trousers (#1A1A1A)',
-                footwear: parsed.styling?.feet ?? parsed.styling?.footwear ?? 'BAREFOOT',
+                adult_bottom: parsed.styling?.adult_bottom || parsed.styling?.bottom || 'Black trousers (#1A1A1A)',
+                adult_feet: parsed.styling?.adult_feet || parsed.styling?.feet || 'Black dress shoes',
+                kid_bottom: parsed.styling?.kid_bottom || parsed.styling?.bottom || 'Black trousers (#1A1A1A)',
+                kid_feet: parsed.styling?.kid_feet || 'White sneakers',
+                // Legacy compatibility
+                pants: parsed.styling?.adult_bottom || parsed.styling?.bottom,
+                footwear: parsed.styling?.adult_feet || parsed.styling?.feet,
             },
             lighting: {
                 type: parsed.lighting?.type || 'Soft diffused studio lighting',
-                temperature: parsed.lighting?.temperature || '5000K neutral',
+                temperature: parsed.lighting?.temperature || '3500K warm', // V2: Default to warm
             },
             mood: parsed.mood || 'Professional, clean, product-focused',
             quality: parsed.quality || '8K editorial Vogue-level',
@@ -429,6 +438,38 @@ export class ClaudeService {
         this.logger.log('✅ DA Reference analysis complete');
 
         return result;
+    }
+
+    /**
+     * V2: Parse ground items - handles both string[] (legacy) and GroundItem[] (V2)
+     */
+    private parseGroundItems(items: any): any[] {
+        if (!items) return [];
+        if (!Array.isArray(items)) return [];
+
+        return items.map((item: any) => {
+            // If it's already a GroundItem object
+            if (typeof item === 'object' && item.name) {
+                return {
+                    name: item.name || 'Unknown item',
+                    surface: item.surface || 'on_floor',
+                    height_level: item.height_level || 'middle',
+                    color: item.color || 'N/A',
+                    material: item.material || 'N/A',
+                };
+            }
+            // If it's a string (legacy format), convert to GroundItem
+            if (typeof item === 'string') {
+                return {
+                    name: item,
+                    surface: 'on_floor',
+                    height_level: 'middle',
+                    color: 'N/A',
+                    material: 'N/A',
+                };
+            }
+            return null;
+        }).filter(Boolean);
     }
 
 

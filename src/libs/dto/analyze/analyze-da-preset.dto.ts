@@ -3,9 +3,6 @@ import { IsOptional, IsString } from 'class-validator';
 /**
  * DTO for DA Reference Analysis endpoint
  * POST /api/da/analyze
- *
- * Image is uploaded via FormData:
- * - image (required): The reference photo of the room/scene
  */
 export class AnalyzeDAPresetDto {
 	@IsOptional()
@@ -30,19 +27,40 @@ export interface DAPresetFloor {
 }
 
 /**
- * Props configuration with spatial split
+ * V2: Individual ground item with exact position
  */
-export interface DAPresetProps {
-	left_side: string[];
-	right_side: string[];
+export interface GroundItem {
+	name: string;
+	surface: 'on_shelf' | 'on_floor' | 'on_table' | string;
+	height_level: 'upper' | 'middle' | 'lower' | string;
+	color?: string;
+	material?: string;
 }
 
 /**
- * Styling configuration
+ * V2: Ground configuration with detailed items
+ */
+export interface DAPresetGround {
+	left_items: GroundItem[];
+	right_items: GroundItem[];
+}
+
+/**
+ * V2: Styling with adult/kid split
  */
 export interface DAPresetStyling {
-	pants: string;
-	footwear: string;
+	/** V2: Adult pants description */
+	adult_bottom?: string;
+	/** V2: Adult footwear */
+	adult_feet?: string;
+	/** V2: Kid pants description */
+	kid_bottom?: string;
+	/** V2: Kid footwear */
+	kid_feet?: string;
+	/** Legacy: combined pants field */
+	pants?: string;
+	/** Legacy: combined footwear field */
+	footwear?: string;
 }
 
 /**
@@ -54,16 +72,25 @@ export interface DAPresetLighting {
 }
 
 /**
- * Complete DA Preset Analysis Response
- * This structure matches the database DAPreset entity format
+ * V2: Complete DA Preset Analysis Response
  */
 export interface AnalyzeDAPresetResponse {
 	da_name: string;
 	background: DAPresetBackground;
 	floor: DAPresetFloor;
-	props: DAPresetProps;
+	/** V2: Ground items with exact positions */
+	ground: DAPresetGround;
 	styling: DAPresetStyling;
 	lighting: DAPresetLighting;
 	mood: string;
 	quality: string;
+}
+
+/**
+ * Legacy: Props configuration (for backward compatibility)
+ * @deprecated Use DAPresetGround instead
+ */
+export interface DAPresetProps {
+	left_side: string[];
+	right_side: string[];
 }

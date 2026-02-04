@@ -60,10 +60,12 @@ export class DAService {
 			background_hex: result.background.hex,
 			floor_type: result.floor.type,
 			floor_hex: result.floor.hex,
-			props_left: result.props.left_side,
-			props_right: result.props.right_side,
-			styling_pants: result.styling.pants,
-			styling_footwear: result.styling.footwear,
+			// V2: ground items (extract names for legacy DB fields)
+			props_left: result.ground.left_items.map((item: any) => typeof item === 'string' ? item : item.name),
+			props_right: result.ground.right_items.map((item: any) => typeof item === 'string' ? item : item.name),
+			// V2: adult styling
+			styling_pants: result.styling.adult_bottom || result.styling.pants,
+			styling_footwear: result.styling.adult_feet || result.styling.footwear,
 			lighting_type: result.lighting.type,
 			lighting_temperature: result.lighting.temperature,
 			mood: result.mood,
@@ -77,76 +79,47 @@ export class DAService {
 	}
 
 	/**
-	 * 🛡️ AGGRESSIVE DATA NORMALIZATION
-	 * 
-	 * This is a forceful safety net that runs AFTER Claude returns JSON.
-	 * DO NOT rely on AI to get the schema right. This function FIXES the data.
+	 * 🛡️ V2: DATA NORMALIZATION (ground structure)
 	 * 
 	 * RULES:
-	 * 1. Props MUST have left_side/right_side arrays (delete items/placement/style)
-	 * 2. 🆕 Smart Footwear: Preserve DA footwear or apply stylish default (no more forced barefoot)
-	 * 3. Default pants to brand standard if missing
+	 * 1. Ground MUST have left_items/right_items arrays
+	 * 2. Styling uses adult_bottom/adult_feet as primary
 	 */
 	private applyBrandRules(daJson: AnalyzeDAPresetResponse): AnalyzeDAPresetResponse {
-		this.logger.log('🛡️ Running AGGRESSIVE Data Normalization...');
+		this.logger.log('🛡️ Running V2 Data Normalization...');
 
 		// ═══════════════════════════════════════════════════════════
-		// RULE 1: FORCE PROPS STRUCTURE (left_side / right_side)
+		// RULE 1: FORCE GROUND STRUCTURE (left_items / right_items)
 		// ═══════════════════════════════════════════════════════════
-		const rawProps = daJson.props as any;
-
-		// Check if correct structure is missing
-		const hasLeftSide = Array.isArray(rawProps?.left_side);
-		const hasRightSide = Array.isArray(rawProps?.right_side);
-
-		if (!hasLeftSide || !hasRightSide) {
-			this.logger.warn('⚠️ AI returned incorrect props structure - FORCING normalization');
-
-			// Try to salvage from 'items' array
-			const items = rawProps?.items || [];
-			const midpoint = Math.ceil(items.length / 2);
-
-			daJson.props = {
-				left_side: hasLeftSide ? rawProps.left_side : items.slice(0, midpoint),
-				right_side: hasRightSide ? rawProps.right_side : items.slice(midpoint),
-			};
+		if (!daJson.ground) {
+			daJson.ground = { left_items: [], right_items: [] };
 		}
 
-		// CLEANUP: Remove any invalid keys that AI might have added
-		const cleanProps = daJson.props as any;
-		delete cleanProps.items;
-		delete cleanProps.placement;
-		delete cleanProps.style;
+		if (!Array.isArray(daJson.ground.left_items)) {
+			daJson.ground.left_items = [];
+		}
+		if (!Array.isArray(daJson.ground.right_items)) {
+			daJson.ground.right_items = [];
+		}
 
 		// ═══════════════════════════════════════════════════════════
-		// RULE 2: STYLING — MIRROR RULE (No Override)
+		// RULE 2: STYLING — V2 adult/kid structure
 		// ═══════════════════════════════════════════════════════════
-		// Preserve EXACTLY what the AI reported from the reference image.
-		// Do NOT replace BAREFOOT with "stylish" shoes. Do NOT guess or "improve" footwear.
-
 		if (!daJson.styling) {
-			daJson.styling = { pants: '', footwear: '' };
+			daJson.styling = {};
 		}
 
-		// Map feet -> footwear if prompt returned "feet"
-		if ((daJson.styling as any).feet != null && daJson.styling.footwear === '') {
-			daJson.styling.footwear = (daJson.styling as any).feet;
+		// Ensure adult styling has defaults
+		if (!daJson.styling.adult_bottom) {
+			daJson.styling.adult_bottom = daJson.styling.pants || 'Black chino pants (#1A1A1A)';
 		}
-		// Only default footwear if completely missing (empty string)
-		if (!daJson.styling.footwear || daJson.styling.footwear.trim() === '') {
-			daJson.styling.footwear = 'BAREFOOT';
-		}
-
-		// ═══════════════════════════════════════════════════════════
-		// RULE 3: Default Pants only if missing
-		// ═══════════════════════════════════════════════════════════
-		if (!daJson.styling?.pants || daJson.styling.pants.trim() === '') {
-			daJson.styling.pants = 'Black chino pants (#1A1A1A)';
+		if (!daJson.styling.adult_feet) {
+			daJson.styling.adult_feet = daJson.styling.footwear || 'Black dress shoes';
 		}
 
-		this.logger.log('✅ Aggressive normalization complete');
-		this.logger.log(`   Props: left_side=${daJson.props.left_side.length}, right_side=${daJson.props.right_side.length}`);
-		this.logger.log(`   Footwear: ${daJson.styling.footwear}`);
+		this.logger.log('✅ V2 normalization complete');
+		this.logger.log(`   Ground: left=${daJson.ground.left_items.length}, right=${daJson.ground.right_items.length}`);
+		this.logger.log(`   Adult styling: ${daJson.styling.adult_bottom} / ${daJson.styling.adult_feet}`);
 
 		return daJson;
 	}
@@ -226,13 +199,13 @@ export class DAService {
 			floor_type: analysisResult.floor.type,
 			floor_hex: analysisResult.floor.hex,
 
-			// Props
-			props_left: analysisResult.props.left_side,
-			props_right: analysisResult.props.right_side,
+			// V2: Ground items
+			props_left: analysisResult.ground.left_items.map((item: any) => typeof item === 'string' ? item : item.name),
+			props_right: analysisResult.ground.right_items.map((item: any) => typeof item === 'string' ? item : item.name),
 
-			// Styling
-			styling_pants: analysisResult.styling.pants,
-			styling_footwear: analysisResult.styling.footwear,
+			// V2: Styling
+			styling_pants: analysisResult.styling.adult_bottom || analysisResult.styling.pants,
+			styling_footwear: analysisResult.styling.adult_feet || analysisResult.styling.footwear,
 
 			// Lighting
 			lighting_type: analysisResult.lighting.type,
@@ -281,10 +254,12 @@ export class DAService {
 		preset.background_hex = analysisData.background.hex;
 		preset.floor_type = analysisData.floor.type;
 		preset.floor_hex = analysisData.floor.hex;
-		preset.props_left = analysisData.props.left_side;
-		preset.props_right = analysisData.props.right_side;
-		preset.styling_pants = analysisData.styling.pants;
-		preset.styling_footwear = analysisData.styling.footwear;
+		// V2: Ground items
+		preset.props_left = analysisData.ground.left_items.map((item: any) => typeof item === 'string' ? item : item.name);
+		preset.props_right = analysisData.ground.right_items.map((item: any) => typeof item === 'string' ? item : item.name);
+		// V2: Styling
+		preset.styling_pants = analysisData.styling.adult_bottom || analysisData.styling.pants;
+		preset.styling_footwear = analysisData.styling.adult_feet || analysisData.styling.footwear;
 		preset.lighting_type = analysisData.lighting.type;
 		preset.lighting_temperature = analysisData.lighting.temperature;
 		preset.mood = analysisData.mood;

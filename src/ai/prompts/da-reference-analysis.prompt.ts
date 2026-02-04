@@ -1,76 +1,121 @@
 /**
- * DA (Art Direction) Reference Analysis Prompt — STRICT "MIRROR" version
+ * DA (Art Direction) Reference Analysis Prompt — V2 PRECISE POSITIONS
  *
  * Used for: POST /api/da/analyze (DAService.analyzeReference → ClaudeService.analyzeDAForPreset)
- * Purpose: Extract visual attributes and SUBJECT'S STYLING exactly as they appear. No guessing.
- *
- * CRITICAL: The AI must describe EXACTLY what the person in the reference image is wearing
- * on their feet and legs. No hallucinating footwear (e.g. "Indoor = Barefoot") or "improving" the style.
+ * Purpose: Extract visual attributes with EXACT positions for image generation.
  */
 export const DA_REFERENCE_ANALYSIS_PROMPT = `You are a Computer Vision Specialist analyzing a "Style Reference" image for a fashion generation pipeline.
-Your goal is to extract the visual attributes of the scene and the SUBJECT'S STYLING exactly as they appear.
+Your goal is to extract the visual attributes of the scene with PRECISE POSITIONS for image generation.
 
-**CRITICAL INSTRUCTION FOR STYLING (THE "MIRROR" RULE):**
-You are NOT a stylist. You are a REPORTER. Do not suggest what "should" be worn. Describe only what IS worn in the image.
+═══════════════════════════════════════════════════════════
+🎯 CRITICAL: EXACT POSITIONS ARE REQUIRED
+═══════════════════════════════════════════════════════════
 
-**ANALYSIS SECTIONS:**
+For image generation to work correctly, you must describe:
+1. WHERE each item is located (left/right/center)
+2. WHAT SURFACE it's on (shelf, floor, table)
+3. The HEIGHT level (upper, middle, lower)
+4. COLOR and MATERIAL
 
-1.  **STYLING (Bottoms & Feet) - HIGHEST PRIORITY:**
-    * **Bottoms:** Describe the pants/skirt/shorts worn by the model in the reference image. Note color, material, and fit.
-        * *Example:* "Black baggy cargo pants", "Beige chinos", "Dark blue denim jeans".
-    * **FEET / FOOTWEAR:** Look specifically at the model's feet.
-        * **IF BAREFOOT:** Output "BAREFOOT". (Do not change this because of the outfit).
-        * **IF SOCKS:** Output "Wearing socks" + color.
-        * **IF SHOES:** Describe the exact type and color. (e.g., "White leather court sneakers", "Black chelsea boots", "Brown loafers").
-    * **Constraint:** If the feet are not visible (cropped), infer the most logical footwear based ONLY on the visible pants style (e.g. Sweatpants -> Sneakers), but prioritize visible evidence.
+**EXAMPLE CORRECT OUTPUT:**
+"Yellow mushroom lamp on upper-left shelf, height ~60cm"
+"Vintage die-cast car (silver) on lower-left shelf"
+"Wooden stacking rings on floor, right side"
 
-2.  **BACKGROUND & ATMOSPHERE:**
-    * Describe the wall texture, floor material, and color palette.
-    * *Example:* "Dark walnut wood paneling with polished concrete floor."
-    * Extract dominant background color as HEX (e.g. #43161f). Extract floor color as HEX if different.
+═══════════════════════════════════════════════════════════
+📦 GROUND ITEMS (Props) - DETAILED BREAKDOWN
+═══════════════════════════════════════════════════════════
 
-3.  **PROPS & DECOR:**
-    * List specific items on the left and right (e.g., "Yellow mushroom lamp", "Vintage books").
-    * Output as two arrays: "left_side" and "right_side" based on position in the image.
+For EACH visible prop/item, extract:
+| Field | Description | Example |
+|-------|-------------|---------|
+| name | What the item is | "Yellow mushroom lamp" |
+| position | left/right/center | "left" |
+| surface | What it's on | "on_shelf" or "on_floor" |
+| height_level | upper/middle/lower | "upper" |
+| color | Dominant color | "#FFD700 (yellow)" |
+| material | What it's made of | "plastic" or "wood" |
 
-4.  **LIGHTING:**
-    * Describe type (Soft Studio, Hard Sunlight) and temperature.
+═══════════════════════════════════════════════════════════
+💡 LIGHTING - DEFAULT TO WARM
+═══════════════════════════════════════════════════════════
 
-**OUTPUT FORMAT (JSON):**
-Return ONLY valid JSON. No markdown, no code fences, no explanations.
+For indoor/studio scenes, lighting is typically WARM:
+- Indoor studio: 3200K-3500K warm (NOT 5000K neutral!)
+- Natural daylight: 5500K neutral
+- Sunset/golden hour: 2700K-3000K very warm
+
+**ALWAYS specify the actual temperature!**
+
+═══════════════════════════════════════════════════════════
+👕 STYLING (Bottoms & Feet) - MIRROR RULE
+═══════════════════════════════════════════════════════════
+
+You are NOT a stylist. You are a REPORTER. Describe ONLY what IS worn.
+
+- **Bottoms:** pants/skirt/shorts - color, material, fit
+- **Feet:** BAREFOOT, socks, or exact shoe type
+- **Adult vs Kid:** If both visible, describe BOTH
+
+═══════════════════════════════════════════════════════════
+📋 OUTPUT FORMAT (JSON)
+═══════════════════════════════════════════════════════════
+
+Return ONLY valid JSON. No markdown, no code fences.
 
 {
-  "da_name": "string (short title for this reference)",
+  "da_name": "string (short title, e.g. 'Nostalgic Playroom')",
   "background": {
-    "type": "string (wall texture and color description)",
-    "hex": "string (dominant background hex, e.g. #43161f)"
+    "type": "string (wall texture and description)",
+    "hex": "string (#XXXXXX)"
   },
   "floor": {
-    "type": "string (floor material and color)",
-    "hex": "string (floor color hex, e.g. #3d2914)"
+    "type": "string (floor material and description)",
+    "hex": "string (#XXXXXX)"
   },
-  "props": {
-    "left_side": ["string (item 1)", "string (item 2)"],
-    "right_side": ["string (item 1)", "string (item 2)"]
+  "ground": {
+    "left_items": [
+      {
+        "name": "string (item name)",
+        "surface": "string (on_shelf / on_floor / on_table)",
+        "height_level": "string (upper / middle / lower)",
+        "color": "string (hex or color name)",
+        "material": "string (wood / metal / plastic / fabric)"
+      }
+    ],
+    "right_items": [
+      {
+        "name": "string (item name)",
+        "surface": "string (on_shelf / on_floor / on_table)",
+        "height_level": "string (upper / middle / lower)",
+        "color": "string (hex or color name)",
+        "material": "string (wood / metal / plastic / fabric)"
+      }
+    ]
   },
   "lighting": {
-    "type": "string (e.g. Soft Studio, Hard Sunlight)",
-    "temperature": "string (e.g. 3200K warm, 5000K neutral)"
+    "type": "string (Soft Studio / Hard Sunlight / Natural Window)",
+    "temperature": "string (3500K warm / 5500K neutral)"
   },
   "styling": {
-    "bottom": "string (Exact description of pants/skirt/shorts)",
-    "feet": "string (Exact description of footwear or 'BAREFOOT' or 'Wearing socks' + color)",
-    "accessories": "string (Any visible hats/glasses or 'None visible')"
+    "adult_bottom": "string (adult pants description with hex)",
+    "adult_feet": "string (adult footwear)",
+    "kid_bottom": "string (kid pants description with hex)",
+    "kid_feet": "string (kid footwear, or BAREFOOT)"
   },
   "mood": "string (atmosphere in a few words)",
-  "quality": "string (e.g. 8K editorial Vogue-level)"
+  "quality": "string (8K editorial Vogue-level)"
 }
 
-**FINAL CHECKLIST:**
-- Did you describe ONLY what is visible in the image (MIRROR rule)?
-- Is styling.feet populated strictly from visual evidence (or BAREFOOT if barefoot)?
-- Did you split props into left_side and right_side?
-- Did you include HEX codes for background and floor?
+═══════════════════════════════════════════════════════════
+✅ CHECKLIST
+═══════════════════════════════════════════════════════════
+
+Before returning JSON, verify:
+[ ] Each ground item has: name, surface, height_level, color, material
+[ ] Lighting temperature is realistic (3200K-3500K for indoor warm)
+[ ] Background AND Floor have separate hex codes
+[ ] Styling describes EXACTLY what's visible (MIRROR rule)
 
 Analyze the image now.`;
 
@@ -85,9 +130,15 @@ Return ONLY valid JSON matching this structure:
   "da_name": "Default Studio",
   "background": { "type": "Neutral grey seamless paper", "hex": "#808080" },
   "floor": { "type": "Light grey concrete", "hex": "#A9A9A9" },
-  "props": { "left_side": [], "right_side": [] },
-  "styling": { "bottom": "Black trousers (#1A1A1A)", "feet": "BAREFOOT", "accessories": "None visible" },
-  "lighting": { "type": "Soft diffused studio lighting", "temperature": "5000K neutral" },
+  "ground": { "left_items": [], "right_items": [] },
+  "styling": { 
+    "adult_bottom": "Black trousers (#1A1A1A)",
+    "adult_feet": "Black dress shoes",
+    "kid_bottom": "Black trousers (#1A1A1A)",
+    "kid_feet": "White sneakers"
+  },
+  "lighting": { "type": "Soft diffused studio lighting", "temperature": "3500K warm" },
   "mood": "Clean, professional, product-focused",
   "quality": "8K editorial Vogue-level"
 }`;
+

@@ -847,37 +847,55 @@ export class GenerationsService {
 	}
 
 	/**
-	 * Convert Collection's AnalyzedDAJSON to AnalyzeDAPresetResponse format
-	 * Required because collections use a different DA format than DA presets
+	 * V2: Convert Collection's AnalyzedDAJSON to AnalyzeDAPresetResponse format
 	 */
 	private convertCollectionDAToPresetFormat(daJSON: Record<string, any>, collectionName?: string): AnalyzeDAPresetResponse {
 		// Extract props - split items array into left/right sides
-		const propsItems: string[] = daJSON.props?.items || [];
+		const propsItems: string[] = daJSON.props?.items || daJSON.ground?.left_items?.map((i: any) => i.name || i) || [];
+		const rightItems: string[] = daJSON.ground?.right_items?.map((i: any) => i.name || i) || [];
 		const midpoint = Math.ceil(propsItems.length / 2);
 		const leftProps = propsItems.slice(0, midpoint);
-		const rightProps = propsItems.slice(midpoint);
+		const rightProps = rightItems.length > 0 ? rightItems : propsItems.slice(midpoint);
 
 		return {
 			da_name: collectionName || 'Collection DA',
 			background: {
-				type: daJSON.background?.description || daJSON.background?.color_name || 'Clean studio background',
-				hex: daJSON.background?.color_hex || '#FFFFFF',
+				type: daJSON.background?.description || daJSON.background?.type || daJSON.background?.color_name || 'Clean studio background',
+				hex: daJSON.background?.color_hex || daJSON.background?.hex || '#FFFFFF',
 			},
 			floor: {
-				type: daJSON.background?.texture || 'Smooth surface',
-				hex: daJSON.background?.color_hex || '#F5F5F5',
+				type: daJSON.floor?.type || daJSON.background?.texture || 'Smooth surface',
+				hex: daJSON.floor?.hex || daJSON.background?.color_hex || '#F5F5F5',
 			},
-			props: {
-				left_side: leftProps.length > 0 ? leftProps : ['minimal decor'],
-				right_side: rightProps.length > 0 ? rightProps : ['minimal decor'],
+			// V2: ground items with detailed structure
+			ground: {
+				left_items: leftProps.map((name: string) => ({
+					name,
+					surface: 'on_floor',
+					height_level: 'middle',
+					color: 'N/A',
+					material: 'N/A',
+				})),
+				right_items: rightProps.map((name: string) => ({
+					name,
+					surface: 'on_floor',
+					height_level: 'middle',
+					color: 'N/A',
+					material: 'N/A',
+				})),
 			},
+			// V2: adult/kid styling support
 			styling: {
+				adult_bottom: daJSON.styling?.adult_bottom || daJSON.styling?.bottom || 'Black chino pants (#1A1A1A)',
+				adult_feet: daJSON.styling?.adult_feet || daJSON.styling?.feet || 'Clean white premium leather sneakers',
+				kid_bottom: daJSON.styling?.kid_bottom || daJSON.styling?.bottom || 'Black chino pants (#1A1A1A)',
+				kid_feet: daJSON.styling?.kid_feet || 'White sneakers',
 				pants: daJSON.styling?.bottom || 'Black chino pants',
 				footwear: daJSON.styling?.feet || 'Clean white premium leather sneakers',
 			},
 			lighting: {
 				type: daJSON.lighting?.type || 'softbox',
-				temperature: daJSON.lighting?.temperature || 'neutral',
+				temperature: daJSON.lighting?.temperature || '3500K warm',
 			},
 			mood: daJSON.mood || 'Professional editorial',
 			quality: daJSON.quality || 'professional editorial photography',
