@@ -457,11 +457,11 @@ export class PromptBuilderService {
             da_elements: daElements
         } as MergedPromptObject;
 
-        // 6.5 CLOSE UP FRONT — FORCE: resolution suffix at very end
+        // 6.5 CLOSE UP FRONT — Model wearing garment, focus on front details (DA compliant)
         const closeUpFrontPrompt = this.buildCloseUpFrontPrompt(product, da, qualitySuffix);
         const closeUpFrontFinal = closeUpFrontPrompt + resolutionSuffix;
-        // Force strict no-human negative prompt for closeups
-        const closeUpFrontNegative = this.buildShotNegativePrompt('closeup_front', product) + ', face, head, hands, legs, person, human, body, street scene, walking, distance shot';
+        // Closeup shows model wearing - allow partial body but no full face
+        const closeUpFrontNegative = this.buildShotNegativePrompt('closeup_front', product) + ', full body shot, wide shot, distance shot, full face visible';
         const closeup_front: MergedPromptObject = {
             visual_id: `visual_5_closeup_front_product`,
             shot_type: 'closeup_front',
@@ -481,11 +481,11 @@ export class PromptBuilderService {
             da_elements: daElements
         } as MergedPromptObject;
 
-        // 6.6 CLOSE UP BACK — FORCE: resolution suffix at very end
+        // 6.6 CLOSE UP BACK — Model wearing garment from behind, focus on back patch (DA compliant)
         const closeUpBackPrompt = this.buildCloseUpBackPrompt(product, da, qualitySuffix);
         const closeUpBackFinal = closeUpBackPrompt + resolutionSuffix;
-        // Force strict no-human negative prompt for closeups
-        let closeUpBackNegative = this.buildShotNegativePrompt('closeup_back', product) + ', face, head, hands, legs, person, human, body, street scene, walking, distance shot';
+        // Closeup shows model from behind - allow back of head/body but no full face
+        let closeUpBackNegative = this.buildShotNegativePrompt('closeup_back', product) + ', full body shot, wide shot, distance shot, front facing, face visible';
 
         // 🚀 ANTI-ROUND SHIELD: If patch is square/rectangular, blocking round shapes
         const patchDetail = product.design_back?.patch_detail || '';
@@ -1070,8 +1070,9 @@ export class PromptBuilderService {
     }
 
     /**
-     * CLOSE UP FRONT with Color Weighting
-     * Macro detail shot of front texture and logo
+     * CLOSE UP FRONT - MODEL WEARING GARMENT with Color Weighting
+     * Shows child/adult model wearing the product, close-up of front details
+     * Focus on front texture, logo, buttons while model wears it
      * 
      * 🎨 COLOR WEIGHTING: Applied to prevent color bias in macro shots
      */
@@ -1088,27 +1089,32 @@ export class PromptBuilderService {
         // 🎨 COLOR WEIGHTING
         const weightedColor = this.applyColorWeighting(product.visual_specs.color_name, 'closeup_front');
 
-        // Priority 1: Client Data
-        const productData = `Product: ${weightedColor} ${product.general_info.product_name}. Fabric: ${product.visual_specs.fabric_texture}. ` +
-            `${product.design_front.description}.${hardwareText}`;
+        // 🎯 Priority 1: SUBJECT - Child model wearing the garment
+        const subjectPart = `Young child model wearing ${weightedColor} ${product.general_info.product_name}. Cropped portrait from chest up, partial face visible (chin/lips only). Child looking slightly to the side.`;
 
-        // Priority 2: Shot
-        const shotAction = `Macro extreme close-up detail shot of texture. Focus on fabric weave and stitching details.`;
+        // Priority 2: Product Details on model
+        const productData = `Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}.${hardwareText} Focus on front details, buttons, and texture while worn.`;
 
-        // 🎯 Priority 3: DA ENVIRONMENT - Even closeups respect DA backdrop/mood
-        const environmentPart = `Shot on ${da.floor.type} with ${da.background.type} backdrop. Mood: ${da.mood || 'editorial elegance'}.`;
+        // 🎯 Priority 3: DA ENVIRONMENT - Same location as other shots
+        const leftItems = da.ground?.left_items || [];
+        const rightItems = da.ground?.right_items || [];
+        const leftProps = leftItems.length > 0 ? leftItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
+        const rightProps = rightItems.length > 0 ? rightItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
+        const propsText = [leftProps, rightProps].filter(Boolean).join(', ') || 'minimal styling';
+        const environmentPart = `${da.background.type} backdrop. Props: ${propsText}. Mood: ${da.mood || 'editorial elegance'}.`;
 
-        // Priority 4: Helpers
-        const helpers = `NO PEOPLE, NO HANDS, MACRO LENS. ${qualitySuffix}`;
+        // Priority 4: Technical
+        const helpers = `Editorial fashion photography. Close-up detail shot. ${qualitySuffix}`;
 
-        return `${productData} ${shotAction} ${environmentPart} ${helpers}`;
+        return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
 
 
 
     /**
-     * CLOSE UP BACK with Color Weighting
-     * Macro detail shot of back patch and branding
+     * CLOSE UP BACK - MODEL WEARING GARMENT FROM BEHIND with Color Weighting
+     * Shows model from behind wearing the product, focus on back patch/branding
+     * Model's back to camera, showing rear of garment with logo visible
      * 
      * 🎨 COLOR WEIGHTING: Applied to prevent color bias in macro shots
      */
@@ -1137,25 +1143,28 @@ export class PromptBuilderService {
         let geometryPhrase = '';
 
         if (combinedText.includes('square')) {
-            geometryPhrase = 'Macro focus on the sharply DEFINED SQUARE geometric shape of the leather patch, featuring four distinct sharp corners and straight edges. Contained within this square boundary is ';
-        } else if (combinedText.includes('rectang')) { // matches rectangle, rectangular
-            geometryPhrase = 'Macro focus on the sharply DEFINED RECTANGULAR geometric shape of the leather patch, featuring four distinct sharp corners and straight edges. Contained within this rectangular boundary is ';
+            geometryPhrase = 'Focus on the SQUARE leather patch with sharp corners. ';
+        } else if (combinedText.includes('rectang')) {
+            geometryPhrase = 'Focus on the RECTANGULAR leather patch with sharp corners. ';
         }
 
-        const focusPhrase = geometryPhrase ? `${geometryPhrase}${patchDetail}` : `Focus on ${patchDetail}`;
+        // 🎯 Priority 1: SUBJECT - Model from behind wearing garment
+        const subjectPart = `Model photographed from behind wearing ${weightedColor} ${product.general_info.product_name}. Back of head and shoulders visible. Model facing away from camera.`;
 
-        // Priority 1: Client Data
-        const productData = `Product: ${weightedColor} rear brand patch. Fabric: ${product.visual_specs.fabric_texture}${texturePhrase}. ${techniqueText}.`;
+        // Priority 2: Product Details - focus on back patch
+        const productData = `${geometryPhrase}Rear ${patchDetail} clearly visible. Fabric: ${product.visual_specs.fabric_texture}${texturePhrase}.${techniqueText}`;
 
-        // Priority 2: Shot
-        const shotAction = `Macro detail shot. ${focusPhrase}.`;
+        // 🎯 Priority 3: DA ENVIRONMENT - Same location as other shots
+        const leftItems = da.ground?.left_items || [];
+        const rightItems = da.ground?.right_items || [];
+        const leftProps = leftItems.length > 0 ? leftItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
+        const rightProps = rightItems.length > 0 ? rightItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
+        const propsText = [leftProps, rightProps].filter(Boolean).join(', ') || 'minimal styling';
+        const environmentPart = `${da.background.type} backdrop. Props: ${propsText}. Mood: ${da.mood || 'editorial elegance'}.`;
 
-        // 🎯 Priority 3: DA ENVIRONMENT - Even closeups respect DA backdrop/mood
-        const environmentPart = `Shot on ${da.floor.type} with ${da.background.type} backdrop. Mood: ${da.mood || 'editorial elegance'}.`;
+        // Priority 4: Technical
+        const helpers = `Editorial fashion photography. Close-up detail shot showing back of garment. ${qualitySuffix}`;
 
-        // Priority 4: Helpers
-        const helpers = `Emphasizing craftsmanship and quality. ${qualitySuffix}`;
-
-        return `${productData} ${shotAction} ${environmentPart} ${helpers}`;
+        return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
 }
