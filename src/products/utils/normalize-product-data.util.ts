@@ -86,19 +86,39 @@ export function normalizeProductData(
 	};
 
 	// ═══════════════════════════════════════════════════════════
+	// 🔧 NORMALIZE VISUAL_SPECS (required by AnalyzedProductJSON)
+	// ═══════════════════════════════════════════════════════════
+
+	const color_hex = rawAIResponse.color_hex || '#808080';
+	const texture_description = rawAIResponse.texture_description || '';
+
+	const visual_specs = rawAIResponse.visual_specs && typeof rawAIResponse.visual_specs === 'object'
+		? {
+			color_name: sanitizeString(rawAIResponse.visual_specs.color_name, color_name),
+			hex_code: rawAIResponse.visual_specs.hex_code || color_hex,
+			fabric_texture: sanitizeString(rawAIResponse.visual_specs.fabric_texture, texture_description || material),
+		}
+		: {
+			color_name,
+			hex_code: color_hex,
+			fabric_texture: texture_description || material,
+		};
+
+	// ═══════════════════════════════════════════════════════════
 	// 📦 RETURN CLEAN DATA
 	// ═══════════════════════════════════════════════════════════
 
 	return {
+		visual_specs,
 		product_type,
 		product_name: rawAIResponse.product_name || product_type,
 		color_name,
-		color_hex: rawAIResponse.color_hex || '#808080',
+		color_hex,
 		material,
 		details,
 		logo_front,
 		logo_back,
-		texture_description: rawAIResponse.texture_description || '',
+		texture_description,
 		additional_details: Array.isArray(rawAIResponse.additional_details)
 			? rawAIResponse.additional_details
 			: [],

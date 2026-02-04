@@ -18,6 +18,7 @@ export interface LogoInfo {
 }
 
 export interface AnalyzedProductJSON {
+  visual_specs: any;
   product_type: string;
   product_name: string;
   color_name: string;
