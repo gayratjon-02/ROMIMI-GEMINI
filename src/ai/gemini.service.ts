@@ -373,6 +373,160 @@ High quality studio lighting, sharp details, clean background.`;
 	}
 
 	/**
+	 * 🆕 Generate image WITH reference images
+	 * 
+	 * This method sends product reference images (front/back) to Gemini
+	 * along with the text prompt, enabling accurate reproduction of:
+	 * - Exact pocket count and positions
+	 * - Button count and placement
+	 * - Logo/branding details
+	 * - Fabric texture and color
+	 * 
+	 * @param prompt - The text prompt describing the shot
+	 * @param referenceImages - Array of image URLs (front/back product images)
+	 * @param aspectRatio - Output aspect ratio
+	 * @param resolution - Output resolution
+	 * @param userApiKey - Optional user-specific API key
+	 */
+	async generateImageWithReference(
+		prompt: string,
+		referenceImages: string[],
+		aspectRatio?: string,
+		resolution?: string,
+		userApiKey?: string
+	): Promise<GeminiImageResult> {
+		const client = this.getClient(userApiKey);
+		const startTime = Date.now();
+
+		// Filter valid images
+		const validImages = (referenceImages || []).filter(img => img && img.trim() !== '');
+
+		this.logger.log(`🖼️ ========== GEMINI WITH REFERENCE IMAGES ==========`);
+		this.logger.log(`📋 Reference images count: ${validImages.length}`);
+		validImages.forEach((img, i) => {
+			this.logger.log(`   - Image ${i + 1}: ${img.substring(0, 80)}...`);
+		});
+
+		// If no valid reference images, fall back to regular generation
+		if (validImages.length === 0) {
+			this.logger.warn(`⚠️ No valid reference images provided, falling back to text-only generation`);
+			return this.generateImage(prompt, undefined, aspectRatio, resolution, userApiKey);
+		}
+
+		// Build image parts from URLs
+		const imageParts = await this.buildImageParts(validImages);
+
+		if (imageParts.length === 0) {
+			this.logger.warn(`⚠️ Failed to load reference images, falling back to text-only generation`);
+			return this.generateImage(prompt, undefined, aspectRatio, resolution, userApiKey);
+		}
+
+		// Map aspect ratio and resolution
+		const ratioText = this.mapAspectRatioToGemini(aspectRatio ?? '4:5');
+		const resolutionText = this.mapResolutionToGemini(resolution);
+
+		// Enhanced prompt with reference instruction
+		const referencePrompt = `🎯 CRITICAL: Use the provided reference images as EXACT VISUAL GUIDE.
+You MUST match ALL details from reference images precisely:
+- EXACT pocket count and positions (count every pocket!)
+- EXACT button count and placement
+- EXACT color (sample HEX from reference)
+- EXACT logo/branding details and positions
+- EXACT fabric texture and material appearance
+- EXACT collar/cuff/seam details
+
+Generate a NEW professional product photography based on these references.
+The generated image must be VISUALLY IDENTICAL to the reference product.
+
+PHOTOGRAPHY REQUIREMENTS:
+${this.sanitizePromptForImageGeneration(prompt)}
+
+HIGH QUALITY OUTPUT: Professional e-commerce photography, studio lighting, sharp details.`;
+
+		this.logger.log(`📝 Reference prompt (first 300 chars): ${referencePrompt.substring(0, 300)}...`);
+
+		try {
+			const imageConfig = {
+				aspectRatio: ratioText,
+				imageSize: resolutionText,
+			};
+
+			// 🚀 CRITICAL: Send text + reference images together
+			const generatePromise = client.models.generateContent({
+				model: this.MODEL,
+				contents: [
+					{
+						role: 'user',
+						parts: [
+							{ text: referencePrompt },
+							...imageParts  // Reference images as visual guide
+						]
+					}
+				],
+				config: {
+					responseModalities: ['TEXT', 'IMAGE'],
+					imageConfig,
+					safetySettings: [
+						{ category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+						{ category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+					]
+				}
+			});
+
+			// Wrap with timeout
+			const response = await this.withTimeout(
+				generatePromise,
+				this.TIMEOUT_MS,
+				'Gemini image generation with reference'
+			);
+
+			const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+			this.logger.log(`⏱️ Gemini response received in ${elapsedTime}s`);
+
+			// Parse response (same logic as generateImages)
+			if (!response.candidates || response.candidates.length === 0) {
+				this.logger.error(`❌ No candidates in response`);
+				throw new GeminiGenerationError('Gemini returned no candidates');
+			}
+
+			const candidate = response.candidates[0];
+			const parts = candidate.content?.parts || [];
+
+			for (const part of parts as any[]) {
+				if (part.inlineData) {
+					const mimeType = part.inlineData.mimeType || 'image/png';
+					const data = part.inlineData.data;
+
+					if (data && data.length > 0) {
+						this.logger.log(`🎉 SUCCESS: Generated image with reference in ${elapsedTime}s`);
+						return { mimeType, data };
+					}
+				}
+
+				// Check for refusal
+				if (part.text) {
+					const lowerText = part.text.toLowerCase();
+					if (lowerText.includes('cannot generate') || lowerText.includes('unable to')) {
+						throw new GeminiGenerationError(`Model refused: ${part.text.substring(0, 200)}`);
+					}
+				}
+			}
+
+			throw new GeminiGenerationError('Gemini did not generate any images with reference');
+
+		} catch (error: any) {
+			const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+			this.logger.error(`❌ Reference generation failed after ${elapsedTime}s: ${error.message}`);
+
+			// On failure, try falling back to text-only generation
+			this.logger.warn(`🔄 Falling back to text-only generation...`);
+			return this.generateImage(prompt, undefined, aspectRatio, resolution, userApiKey);
+		}
+	}
+
+	/**
 	 * Generate batch of images sequentially
 	 */
 	async generateBatch(prompts: string[], aspectRatio?: string, resolution?: string): Promise<GeminiImageResult[]> {

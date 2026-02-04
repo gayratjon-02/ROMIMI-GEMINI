@@ -72,6 +72,45 @@ export class VertexImagenService {
 	}
 
 	/**
+	 * 🆕 Generate image WITH reference images
+	 * 
+	 * Delegates to GeminiService.generateImageWithReference()
+	 * Use this when you want Gemini to match exact product details from reference photos.
+	 * 
+	 * @param prompt - The text prompt
+	 * @param referenceImages - Array of product image URLs (front/back)
+	 * @param aspectRatio - Output aspect ratio
+	 * @param resolution - Output resolution
+	 * @param userApiKey - Optional user API key
+	 */
+	async generateImageWithReference(
+		prompt: string,
+		referenceImages: string[],
+		aspectRatio?: string,
+		resolution?: string,
+		userApiKey?: string
+	): Promise<VertexImagenResult> {
+		this.logger.log(`🖼️ [Gemini API] Generating image WITH ${referenceImages?.length || 0} reference images`);
+		this.logger.log(`📐 aspect=${aspectRatio ?? 'default'} resolution=${resolution ?? 'default'}`);
+
+		try {
+			const result = await this.geminiService.generateImageWithReference(
+				prompt,
+				referenceImages,
+				aspectRatio,
+				resolution,
+				userApiKey
+			);
+
+			this.logger.log('✅ [Gemini API] Image with reference generated successfully');
+			return result;
+		} catch (error: any) {
+			this.logger.error(`❌ [Gemini API] Reference image generation failed: ${error.message}`);
+			throw error;
+		}
+	}
+
+	/**
 	 * Get current model name from GeminiService
 	 */
 	getModelName(): string {

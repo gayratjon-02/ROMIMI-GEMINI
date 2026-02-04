@@ -275,13 +275,35 @@ export class GenerationsService {
 				this.emitVisualProcessing(generationId, userId, visualIndex, promptType);
 
 				try {
-					// Call Gemini API with generation aspect_ratio and resolution
-					const result = await this.vertexImagenService.generateImage(
-						prompt,
-						undefined,
-						generation.aspect_ratio,
-						generation.resolution,
-					);
+					// 🆕 Collect product reference images (front + back)
+					const referenceImages: string[] = [];
+					if (generation.product.front_image_url) {
+						referenceImages.push(generation.product.front_image_url);
+					}
+					if (generation.product.back_image_url) {
+						referenceImages.push(generation.product.back_image_url);
+					}
+					// Also include any additional reference images
+					if (generation.product.reference_images?.length) {
+						referenceImages.push(...generation.product.reference_images);
+					}
+
+					this.logger.log(`🖼️ Reference images for ${promptType}: ${referenceImages.length} images`);
+
+					// 🆕 Use reference-based generation if images available
+					const result = referenceImages.length > 0
+						? await this.vertexImagenService.generateImageWithReference(
+							prompt,
+							referenceImages,
+							generation.aspect_ratio,
+							generation.resolution,
+						)
+						: await this.vertexImagenService.generateImage(
+							prompt,
+							undefined,
+							generation.aspect_ratio,
+							generation.resolution,
+						);
 
 					// Save image to storage
 					let imageUrl: string | null = null;
@@ -648,13 +670,35 @@ export class GenerationsService {
 				this.emitVisualProcessing(generationId, userId, visualIndex, shotType);
 
 				try {
-					// Call Gemini API with generation aspect_ratio and resolution
-					const result = await this.vertexImagenService.generateImage(
-						prompt,
-						undefined,
-						generation.aspect_ratio,
-						generation.resolution,
-					);
+					// 🆕 Collect product reference images (front + back)
+					const referenceImages: string[] = [];
+					if (generation.product.front_image_url) {
+						referenceImages.push(generation.product.front_image_url);
+					}
+					if (generation.product.back_image_url) {
+						referenceImages.push(generation.product.back_image_url);
+					}
+					// Also include any additional reference images
+					if (generation.product.reference_images?.length) {
+						referenceImages.push(...generation.product.reference_images);
+					}
+
+					this.logger.log(`🖼️ Reference images for ${shotType}: ${referenceImages.length} images`);
+
+					// 🆕 Use reference-based generation if images available
+					const result = referenceImages.length > 0
+						? await this.vertexImagenService.generateImageWithReference(
+							prompt,
+							referenceImages,
+							generation.aspect_ratio,
+							generation.resolution,
+						)
+						: await this.vertexImagenService.generateImage(
+							prompt,
+							undefined,
+							generation.aspect_ratio,
+							generation.resolution,
+						);
 
 					// Save image to storage
 					let imageUrl: string | null = null;
