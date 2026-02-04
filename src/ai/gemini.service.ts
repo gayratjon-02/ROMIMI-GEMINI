@@ -8,6 +8,7 @@ import { AnalyzedDAJSON } from '../common/interfaces/da-json.interface';
 import { PRODUCT_ANALYSIS_PROMPT } from './prompts/product-analysis.prompt';
 import { DA_ANALYSIS_PROMPT } from './prompts/da-analysis.prompt';
 import * as fs from 'fs';
+import * as path from 'path';
 
 // Custom error types for better error handling
 export class GeminiTimeoutError extends Error {
@@ -804,15 +805,37 @@ HIGH QUALITY OUTPUT: Professional e-commerce photography, studio lighting, sharp
 
 				// Check if it's a URL or file path
 				if (image.startsWith('http://') || image.startsWith('https://')) {
-					// Fetch from URL
-					const response = await fetch(image);
-					if (!response.ok) {
-						this.logger.warn(`Failed to fetch image: ${image}`);
-						continue;
+					// 🔧 Check if this is our own backend URL - read locally instead of HTTP fetch
+					// This fixes Docker container networking issues where container can't reach its own external IP
+					const uploadBaseUrl = process.env.UPLOAD_BASE_URL || '';
+					if (uploadBaseUrl && image.startsWith(uploadBaseUrl)) {
+						// Extract the path after the base URL and read locally
+						const relativePath = image.replace(uploadBaseUrl, '').replace(/^\/+/, '');
+						const localPath = path.join(process.cwd(), relativePath);
+						this.logger.log(`📂 Reading local file instead of fetch: ${localPath}`);
+
+						if (fs.existsSync(localPath)) {
+							const buffer = fs.readFileSync(localPath);
+							base64Data = buffer.toString('base64');
+							// Detect mime type from extension
+							if (localPath.endsWith('.png')) mimeType = 'image/png';
+							else if (localPath.endsWith('.webp')) mimeType = 'image/webp';
+							else if (localPath.endsWith('.jpg') || localPath.endsWith('.jpeg')) mimeType = 'image/jpeg';
+						} else {
+							this.logger.warn(`Local file not found: ${localPath}`);
+							continue;
+						}
+					} else {
+						// Fetch from external URL
+						const response = await fetch(image);
+						if (!response.ok) {
+							this.logger.warn(`Failed to fetch image: ${image}`);
+							continue;
+						}
+						const buffer = Buffer.from(await response.arrayBuffer());
+						base64Data = buffer.toString('base64');
+						mimeType = response.headers.get('content-type') || 'image/jpeg';
 					}
-					const buffer = Buffer.from(await response.arrayBuffer());
-					base64Data = buffer.toString('base64');
-					mimeType = response.headers.get('content-type') || 'image/jpeg';
 				} else if (image.startsWith('data:')) {
 					// Base64 data URL
 					const matches = image.match(/^data:([^;]+);base64,(.+)$/);

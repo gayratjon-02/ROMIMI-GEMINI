@@ -1149,6 +1149,15 @@ Generate the 6 merged prompts now. Return ONLY valid JSON object with the struct
         }
 
         if (image.startsWith('http://') || image.startsWith('https://')) {
+            // 🔧 Check if this is our own backend URL - read locally instead of HTTP fetch
+            // This fixes Docker container networking issues where container can't reach its own external IP
+            const uploadBaseUrl = process.env.UPLOAD_BASE_URL || '';
+            if (uploadBaseUrl && image.startsWith(uploadBaseUrl)) {
+                // Extract the path after the base URL (e.g., /uploads/xxx.jpg)
+                const relativePath = image.replace(uploadBaseUrl, '').replace(/^\/+/, '');
+                this.logger.log(`📂 Reading local file instead of fetch: ${relativePath}`);
+                return this.readLocalImage(relativePath);
+            }
             return this.fetchImage(image);
         }
 

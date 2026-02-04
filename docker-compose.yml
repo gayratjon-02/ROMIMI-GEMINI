@@ -33,11 +33,16 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://167.172.90.235:4000}
 
       # File Uploads - Backend runs on port 4001
+      # NOTE: Inside container, use localhost:5001 to access own files
       FILE_STORAGE_PROVIDER: local
       UPLOAD_LOCAL_PATH: uploads
+      # External URL for frontend to display images
       UPLOAD_BASE_URL: ${UPLOAD_BASE_URL:-http://167.172.90.235:4001}
       UPLOAD_MAX_FILE_SIZE: 5242880
       UPLOAD_ALLOWED_MIME_TYPES: image/jpeg,image/png,image/webp
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
     volumes:
       - ./uploads:/usr/src/app/uploads
