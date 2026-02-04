@@ -5,7 +5,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpdateUserDto } from '../libs/dto';
 import { User } from '../database/entities/user.entity';
 import { ClaudeService } from '../ai/claude.service';
-import { VertexImagenService } from '../ai/vertex-imagen.service';
+import { GeminiService } from '../ai/gemini.service';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -13,8 +13,8 @@ export class UsersController {
 	constructor(
 		private readonly usersService: UsersService,
 		private readonly claudeService: ClaudeService,
-		private readonly vertexImagenService: VertexImagenService,
-	) {}
+		private readonly geminiService: GeminiService,
+	) { }
 
 	@Get('getUser')
 	async getUser(@CurrentUser() user: User): Promise<Omit<User, 'password_hash'>> {
@@ -45,15 +45,13 @@ export class UsersController {
 	@Get('getApiKeyStatus')
 	async getApiKeyStatus(@CurrentUser() user: User): Promise<{
 		anthropic: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string; model: string };
-		vertex: { configured: boolean; model: string };
-		gemini: { hasSystemKey: boolean; hasUserKey: boolean; activeSource: string; model: string };
+		gemini: { configured: boolean; hasUserKey: boolean; activeSource: string; model: string };
 	}> {
 		const userSettings = await this.usersService.getUserApiKeys(user.id);
 		const anthropicStatus = this.claudeService.getApiKeyStatus();
-		const vertexConfigured = this.vertexImagenService.isConfigured();
-		const vertexModel = this.vertexImagenService.getModelName();
+		const geminiStatus = this.geminiService.getApiKeyStatus();
 		const anthropicModel = userSettings.claude_model || this.claudeService.getModel();
-		const imagenModelOverride = userSettings.gemini_model || vertexModel;
+		const geminiModel = userSettings.gemini_model || this.geminiService.getModel();
 
 		return {
 			anthropic: {
@@ -62,16 +60,13 @@ export class UsersController {
 				activeSource: userSettings.api_key_anthropic ? 'user' : (anthropicStatus.hasSystemKey ? 'system' : 'none'),
 				model: anthropicModel,
 			},
-			vertex: {
-				configured: vertexConfigured,
-				model: imagenModelOverride,
-			},
 			gemini: {
-				hasSystemKey: false,
+				configured: geminiStatus.hasSystemKey,
 				hasUserKey: !!userSettings.api_key_gemini,
-				activeSource: userSettings.api_key_gemini ? 'user' : 'none',
-				model: imagenModelOverride,
+				activeSource: userSettings.api_key_gemini ? 'user' : (geminiStatus.hasSystemKey ? 'system' : 'none'),
+				model: geminiModel,
 			},
 		};
 	}
 }
+

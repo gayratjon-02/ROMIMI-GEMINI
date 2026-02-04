@@ -1313,15 +1313,15 @@ export class GenerationsService {
 	}
 
 	async debugConfig(): Promise<{
-		vertex_configured: boolean;
+		gemini_configured: boolean;
 		model: string;
 		redis_connected: boolean;
 		queue_status: any;
 		active_jobs: any[];
 		failed_jobs: any[];
 	}> {
-		const vertexConfigured = this.vertexImagenService.isConfigured();
-		this.logger.log(`Debug - Vertex AI Imagen configured: ${vertexConfigured}`);
+		const geminiConfigured = this.vertexImagenService.isConfigured();
+		this.logger.log(`Debug - Gemini API configured: ${geminiConfigured}`);
 
 		let redisConnected = false;
 		let jobCounts = {};
@@ -1347,7 +1347,7 @@ export class GenerationsService {
 		}
 
 		return {
-			vertex_configured: vertexConfigured,
+			gemini_configured: geminiConfigured,
 			model: this.vertexImagenService.getModelName(),
 			redis_connected: redisConnected,
 			queue_status: jobCounts,

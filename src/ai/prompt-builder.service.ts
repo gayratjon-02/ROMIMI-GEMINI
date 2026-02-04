@@ -292,12 +292,13 @@ export class PromptBuilderService {
         // 6. GENERATE 6 SHOT PROMPTS (MergedPromptObject format)
         // ═══════════════════════════════════════════════════════════
 
-        // 6.1 DUO (Two Models) — FORCE: resolution suffix at very end; use duo-safe styling (no Child/father) for Vertex RAI
-        const duoStyling = this.getDuoSafeStyling(styling);
+        // 6.1 DUO (Father + Son) — Client requirement: matching outfits on father and son
+        // Gemini API allows father/son terminology (no need for Vertex RAI workaround)
+        const duoStyling = styling; // Use original styling, no workaround needed for Gemini
         const duoPrompt = this.buildDuoPrompt(product, da, baseAttire, duoStyling, scene, zipperText, qualitySuffix);
         const duoFinalPrompt = duoPrompt + resolutionSuffix;
         const duo: MergedPromptObject = {
-            visual_id: `visual_1_duo_adult`,
+            visual_id: `visual_1_duo_family`,
             shot_type: 'duo',
             model_type: 'adult',
             gemini_prompt: duoFinalPrompt,
@@ -307,7 +308,7 @@ export class PromptBuilderService {
                 resolution: resolution,
                 aspect_ratio: (options as any).aspect_ratio || '4:5'
             },
-            display_name: 'Duo Shot (Two Models)',
+            display_name: 'DUO (Father + Son)',
             editable: true,
             last_edited_at: null,
             background: background,
@@ -843,9 +844,10 @@ export class PromptBuilderService {
         qualitySuffix: string
     ): string {
         // ═══════════════════════════════════════════════════════════
-        // 🎯 PRIORITY 1: SUBJECT FIRST (Two adults only — avoids RAI child filter)
+        // 🎯 PRIORITY 1: SUBJECT FIRST (Father + Son — Client Requirement)
+        // Now using Gemini API which allows father/son terminology
         // ═══════════════════════════════════════════════════════════
-        const subjectPart = 'Two adult male models - one man in his 30s, athletic build, one man in his late 20s. Both clearly adults. Fashion editorial. Both looking at camera. BOTH FULLY CLOTHED, NEVER SHIRTLESS.';
+        const subjectPart = 'Father and son wearing matching outfits. Adult male in his 30s (athletic build, light stubble beard) with his 5-year-old son. Both smiling naturally, relaxed family pose. Fashion editorial. Both looking at camera. BOTH FULLY CLOTHED, NEVER SHIRTLESS.';
 
         // ═══════════════════════════════════════════════════════════
         // 🎯 PRIORITY 2: APPAREL (What they're wearing) - USE baseAttire (includes t-shirt when product is bottom!)
@@ -899,8 +901,8 @@ export class PromptBuilderService {
         // ═══════════════════════════════════════════════════════════
         let subjectPart = '';
         if (modelType === 'kid') {
-            // KID: Very explicit child description with negative enforcement in positive prompt
-            subjectPart = 'KIDS FASHION. Subject: SINGLE YOUNG MALE MODEL. Youth sizing. (NO ADULTS). Playful editorial expression.';
+            // KID: 5-year-old boy - specific age as per client requirement
+            subjectPart = 'KIDS FASHION. Subject: SINGLE 5-YEAR-OLD BOY. Small child size. (NO ADULTS, NO OLDER KIDS). Playful editorial expression, natural child pose.';
         } else {
             // ADULT: Very explicit adult description with negative enforcement in positive prompt
             subjectPart = 'Subject: SINGLE ADULT MALE MODEL. Age 30s. Full adult size. (NO KIDS). Athletic build, confident gaze, light stubble beard.';
@@ -950,7 +952,7 @@ export class PromptBuilderService {
         // SIZE VARIATION: Different size descriptions for adult vs kid
         const sizeDescription = modelType === 'adult'
             ? 'Adult-size garment with standard adult proportions'
-            : 'Child-size garment with smaller, compact proportions';
+            : '5-year-old child-size garment with small, compact proportions for a young boy';
 
         // 🎨 COLOR WEIGHTING: Apply high weight (1.5) to color for product-only shots
         const weightedColor = this.applyColorWeighting(product.visual_specs.color_name, 'flatlay_front');
@@ -998,7 +1000,7 @@ export class PromptBuilderService {
         // SIZE VARIATION: Different size descriptions for adult vs kid
         const sizeDescription = modelType === 'adult'
             ? 'Adult-size garment with standard adult proportions'
-            : 'Child-size garment with smaller, compact proportions';
+            : '5-year-old child-size garment with small, compact proportions for a young boy';
 
         // 🎨 COLOR WEIGHTING (1.5)
         const weightedColor = this.applyColorWeighting(product.visual_specs.color_name, 'flatlay_back');

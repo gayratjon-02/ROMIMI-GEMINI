@@ -15,6 +15,14 @@ export class UpdateCollectionDto {
 	@IsOptional()
 	name?: string;
 
+	@IsString({ message: ValidationMessage.FIELD_INVALID })
+	@IsOptional()
+	code?: string;
+
+	@IsString({ message: ValidationMessage.FIELD_INVALID })
+	@IsOptional()
+	description?: string;
+
 	@IsUUID('4', { message: ValidationMessage.FIELD_INVALID })
 	@IsOptional()
 	brand_id?: string;
@@ -31,4 +39,9 @@ export class UpdateCollectionDto {
 	@IsObject({ message: ValidationMessage.FIELD_INVALID })
 	@IsOptional()
 	prompt_templates?: Record<string, any>;
+
+	@IsObject({ message: ValidationMessage.FIELD_INVALID })
+	@IsOptional()
+	analyzed_da_json?: Record<string, any>;
 }
+

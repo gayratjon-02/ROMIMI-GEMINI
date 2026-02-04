@@ -212,13 +212,39 @@ export class ClaudeService {
                 size_relative_pct: validatedData.design_front?.size_relative_pct,
                 description: validatedData.design_front?.description || 'Clean front design',
                 micro_details: validatedData.design_front?.micro_details,
+                // Legacy: Collar branding (for backward compatibility)
+                collar_branding: validatedData.design_front?.collar_branding ? {
+                    inner_embroidery: validatedData.design_front.collar_branding.inner_embroidery,
+                    neck_label: validatedData.design_front.collar_branding.neck_label ? {
+                        brand_name: validatedData.design_front.collar_branding.neck_label.brand_name,
+                        tagline: validatedData.design_front.collar_branding.neck_label.tagline,
+                        size_shown: validatedData.design_front.collar_branding.neck_label.size_shown,
+                    } : undefined,
+                } : undefined,
+                // V5.3: Interior branding with correct locations (neck tape, hanger loop)
+                interior_branding: validatedData.design_front?.interior_branding ? {
+                    embroidery_location: validatedData.design_front.interior_branding.embroidery_location,
+                    embroidery_text: validatedData.design_front.interior_branding.embroidery_text,
+                    embroidery_color: validatedData.design_front.interior_branding.embroidery_color,
+                    embroidery_visible_from_front: validatedData.design_front.interior_branding.embroidery_visible_from_front,
+                    main_label: validatedData.design_front.interior_branding.main_label ? {
+                        brand_name: validatedData.design_front.interior_branding.main_label.brand_name,
+                        tagline: validatedData.design_front.interior_branding.main_label.tagline,
+                        size_shown: validatedData.design_front.interior_branding.main_label.size_shown,
+                        label_material: validatedData.design_front.interior_branding.main_label.label_material,
+                        label_size: validatedData.design_front.interior_branding.main_label.label_size,
+                        visible_from_front: validatedData.design_front.interior_branding.main_label.visible_from_front,
+                    } : undefined,
+                } : undefined,
             },
             design_back: {
                 has_logo: validatedData.design_back?.has_logo ?? false,
                 has_patch: validatedData.design_back?.has_patch ?? false,
                 description: validatedData.design_back?.description || 'Clean back design',
                 technique: validatedData.design_back?.technique || 'N/A',
+                patch_shape: validatedData.design_back?.patch_shape,
                 patch_color: validatedData.design_back?.patch_color || 'N/A',
+                yoke_material: validatedData.design_back?.yoke_material,
                 patch_detail: validatedData.design_back?.patch_detail || 'N/A',
                 font_family: validatedData.design_back?.font_family,
                 patch_edge: validatedData.design_back?.patch_edge,
@@ -233,11 +259,79 @@ export class ClaudeService {
             },
             garment_details: {
                 pockets: validatedData.garment_details?.pockets || 'Standard pockets',
+                // V5.3: Individual pockets array with exact positioning
+                pockets_array: validatedData.garment_details?.pockets_array?.map((pocket: any) => ({
+                    id: pocket.id || 0,
+                    name: pocket.name || 'Unknown pocket',
+                    position: pocket.position || 'N/A',
+                    horizontal_position: pocket.horizontal_position,
+                    vertical_position: pocket.vertical_position,
+                    orientation: pocket.orientation,
+                    type: pocket.type || 'N/A',
+                    style: pocket.style,
+                    material: pocket.material || 'N/A',
+                    color: pocket.color || 'N/A',
+                    shape: pocket.shape || 'N/A',
+                    size: pocket.size || 'N/A',
+                    closure: pocket.closure || 'N/A',
+                    special_features: pocket.special_features,
+                })),
+                // Legacy: Lower pockets
+                lower_pockets: validatedData.garment_details?.lower_pockets ? {
+                    count: validatedData.garment_details.lower_pockets.count || 0,
+                    type: validatedData.garment_details.lower_pockets.type || 'N/A',
+                    shape: validatedData.garment_details.lower_pockets.shape || 'N/A',
+                    material: validatedData.garment_details.lower_pockets.material || 'N/A',
+                    size: validatedData.garment_details.lower_pockets.size || 'N/A',
+                    closure: validatedData.garment_details.lower_pockets.closure || 'N/A',
+                    button_count: validatedData.garment_details.lower_pockets.button_count,
+                    button_details: validatedData.garment_details.lower_pockets.button_details,
+                } : undefined,
+                // Legacy: Chest pocket
+                chest_pocket: validatedData.garment_details?.chest_pocket ? {
+                    count: validatedData.garment_details.chest_pocket.count || 0,
+                    type: validatedData.garment_details.chest_pocket.type || 'N/A',
+                    material: validatedData.garment_details.chest_pocket.material || 'N/A',
+                    size: validatedData.garment_details.chest_pocket.size || 'N/A',
+                    closure: validatedData.garment_details.chest_pocket.closure,
+                } : undefined,
                 sleeves_or_legs: validatedData.garment_details?.sleeves_or_legs || validatedData.garment_details?.sleeves || 'Standard construction',
+                sleeve_details: validatedData.garment_details?.sleeve_details ? {
+                    length: validatedData.garment_details.sleeve_details.length || 'N/A',
+                    construction: validatedData.garment_details.sleeve_details.construction || 'N/A',
+                    cuff_style: validatedData.garment_details.sleeve_details.cuff_style || 'N/A',
+                    cuff_width: validatedData.garment_details.sleeve_details.cuff_width,
+                    special_features: validatedData.garment_details.sleeve_details.special_features,
+                } : undefined,
                 sleeve_branding: validatedData.garment_details?.sleeve_branding,
+                // V5.2: Shoulder construction with full details
+                shoulder_construction: validatedData.garment_details?.shoulder_construction ? {
+                    has_overlay: validatedData.garment_details.shoulder_construction.has_overlay ?? false,
+                    overlay_type: validatedData.garment_details.shoulder_construction.overlay_type,
+                    material: validatedData.garment_details.shoulder_construction.material,
+                    width: validatedData.garment_details.shoulder_construction.width,
+                    length: validatedData.garment_details.shoulder_construction.length,
+                    extends_from: validatedData.garment_details.shoulder_construction.extends_from,
+                    extends_to: validatedData.garment_details.shoulder_construction.extends_to,
+                    both_shoulders: validatedData.garment_details.shoulder_construction.both_shoulders,
+                    stitching_visible: validatedData.garment_details.shoulder_construction.stitching_visible,
+                    stitching_detail: validatedData.garment_details.shoulder_construction.stitching_detail,
+                    connects_to_yoke: validatedData.garment_details.shoulder_construction.connects_to_yoke,
+                    color_match: validatedData.garment_details.shoulder_construction.color_match,
+                } : undefined,
                 bottom_termination: validatedData.garment_details?.bottom_termination || validatedData.garment_details?.bottom || 'Standard hem',
                 bottom_branding: validatedData.garment_details?.bottom_branding,
                 closure_details: validatedData.garment_details?.closure_details,
+                // V5: Button details with total_visible_buttons
+                buttons: validatedData.garment_details?.buttons ? {
+                    front_closure_count: validatedData.garment_details.buttons.front_closure_count || 0,
+                    total_visible_buttons: validatedData.garment_details.buttons.total_visible_buttons,
+                    material: validatedData.garment_details.buttons.material || 'N/A',
+                    color: validatedData.garment_details.buttons.color || 'N/A',
+                    diameter: validatedData.garment_details.buttons.diameter || 'N/A',
+                    style: validatedData.garment_details.buttons.style || 'N/A',
+                    finish: validatedData.garment_details.buttons.finish,
+                } : undefined,
                 hardware_finish: validatedData.garment_details?.hardware_finish || 'No visible hardware',
                 neckline: validatedData.garment_details?.neckline || 'N/A',
                 seam_architecture: validatedData.garment_details?.seam_architecture,
@@ -445,7 +539,7 @@ Generate the 6 merged prompts now. Return ONLY valid JSON object with the struct
                 closeup_front: this.injectSpecs(parsed.closeup_front, techSpecs),
                 closeup_back: this.injectSpecs(parsed.closeup_back, techSpecs),
             };
-            
+
             this.logger.log(`✅ Merged Prompts with Safety Injection: ${result.duo.prompt.slice(0, 50)}...`);
 
             return result;

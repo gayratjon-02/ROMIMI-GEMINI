@@ -310,7 +310,7 @@ export class GenerationsController {
 
 	@Get('debug/config')
 	async debugConfig(@CurrentUser() user: User): Promise<{
-		vertex_configured: boolean;
+		gemini_configured: boolean;
 		model: string;
 		redis_connected: boolean;
 	}> {

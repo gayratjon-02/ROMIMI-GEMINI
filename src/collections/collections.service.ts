@@ -155,6 +155,14 @@ export class CollectionsService {
 			collection.name = updateCollectionDto.name;
 		}
 
+		if (updateCollectionDto.code !== undefined) {
+			collection.code = updateCollectionDto.code;
+		}
+
+		if (updateCollectionDto.description !== undefined) {
+			collection.description = updateCollectionDto.description;
+		}
+
 		if (updateCollectionDto.da_reference_image_url !== undefined) {
 			collection.da_reference_image_url = updateCollectionDto.da_reference_image_url;
 		}
@@ -165,6 +173,10 @@ export class CollectionsService {
 
 		if (updateCollectionDto.prompt_templates !== undefined) {
 			collection.prompt_templates = updateCollectionDto.prompt_templates;
+		}
+
+		if (updateCollectionDto.analyzed_da_json !== undefined) {
+			collection.analyzed_da_json = updateCollectionDto.analyzed_da_json;
 		}
 
 		return this.collectionsRepository.save(collection);
