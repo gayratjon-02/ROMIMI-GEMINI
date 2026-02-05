@@ -1107,7 +1107,7 @@ export class PromptBuilderService {
         const weightedColor = this.applyColorWeighting(product.visual_specs.color_name, 'closeup_front');
 
         // 🎯 Priority 1: SUBJECT - Model wearing garment, close-up on front chest/collar
-        const subjectPart = `Young child model wearing ${weightedColor} ${product.general_info.product_name}. CLOSE-UP SHOT framed from chin to chest area. Partial face visible showing lips and chin only. Camera focused on front collar, buttons, and chest details.`;
+        const subjectPart = `Young child model wearing ${weightedColor} ${product.general_info.product_name}. FULLY CLOTHED - complete outfit, no bare skin visible. CLOSE-UP SHOT framed from chin to chest area. Partial face visible showing lips and chin only. Camera focused on front collar, buttons, and chest details.`;
 
         // Priority 2: Product Details - FRONT DETAILS on worn garment
         const productData = `FRONT GARMENT DETAILS IN FOCUS: Collar shape clearly visible. ${product.design_front.description}.${hardwareText} Fabric texture: ${product.visual_specs.fabric_texture}. Sharp focus on buttons, zipper, pocket details, and embroidery while worn on model.`;
@@ -1115,8 +1115,8 @@ export class PromptBuilderService {
         // 🎯 Priority 3: DA ENVIRONMENT - Soft blurred background
         const environmentPart = `${da.background.type} backdrop with soft bokeh blur. ${da.lighting?.type || 'Warm studio lighting'}. Shallow depth of field keeping garment details sharp.`;
 
-        // Priority 4: Technical
-        const helpers = `Editorial fashion photography. Close-up portrait framing. Professional child model. Realistic human skin texture. ${qualitySuffix}`;
+        // Priority 4: Technical - CRITICAL: NO BARE SKIN
+        const helpers = `Editorial fashion photography. Close-up portrait framing. Professional child model FULLY DRESSED. Complete outfit - NO bare back, NO bare shoulders, NO exposed skin anywhere. ${qualitySuffix}`;
 
         return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
@@ -1161,8 +1161,8 @@ export class PromptBuilderService {
             geometryPhrase = 'Focus on the RECTANGULAR leather patch with sharp corners. ';
         }
 
-        // 🎯 Priority 1: SUBJECT - Model from behind, close-up on upper back/shoulders
-        const subjectPart = `Young child model photographed from behind wearing ${weightedColor} ${product.general_info.product_name}. CLOSE-UP SHOT of upper back and shoulders area. Back of head with curly hair visible at top of frame. Camera focused on collar and upper back where patch/logo is located.`;
+        // 🎯 Priority 1: SUBJECT - Model from behind, close-up on upper back/shoulders - FULLY CLOTHED
+        const subjectPart = `Young child model photographed from behind wearing ${weightedColor} ${product.general_info.product_name}. FULLY CLOTHED - complete outfit with shirt/top underneath, no bare skin visible. CLOSE-UP SHOT of upper back and shoulders area. Back of head with curly hair visible at top of frame. Camera focused on collar and upper back where patch/logo is located.`;
 
         // Priority 2: Product Details - BACK DETAILS on worn garment
         const productData = `BACK GARMENT DETAILS IN FOCUS: ${geometryPhrase}${patchDetail} prominently visible and sharp. Fabric: ${product.visual_specs.fabric_texture}${texturePhrase}.${techniqueText} Shoulder seams, collar back, and stitching details visible while worn on model.`;
@@ -1170,8 +1170,8 @@ export class PromptBuilderService {
         // 🎯 Priority 3: DA ENVIRONMENT - Soft blurred background
         const environmentPart = `${da.background.type} backdrop with soft bokeh blur. ${da.lighting?.type || 'Warm studio lighting'}. Shallow depth of field keeping back details sharp.`;
 
-        // Priority 4: Technical
-        const helpers = `Editorial fashion photography. Close-up back view. Professional child model from behind. Realistic human presence. ${qualitySuffix}`;
+        // Priority 4: Technical - CRITICAL: NO BARE SKIN
+        const helpers = `Editorial fashion photography. Close-up back view. Professional child model from behind. COMPLETE OUTFIT - NO bare back, NO bare shoulders, NO exposed skin. Model wearing full clothing underneath. ${qualitySuffix}`;
 
         return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
