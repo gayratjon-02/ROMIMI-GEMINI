@@ -1070,10 +1070,9 @@ export class PromptBuilderService {
     }
 
     /**
-     * CLOSE UP FRONT - MODEL WEARING GARMENT with Color Weighting
-     * Shows model wearing the product in DA atmosphere, FRONT PART SHOWN UP CLOSE
-     * Focus on front texture, logo, buttons while model wears it
-     * Model does NOT have to be a child - any adult/kid can be used
+     * CLOSE UP FRONT - GARMENT DETAIL SHOT (NO MODEL)
+     * Shows ONLY the front part of the garment - logo, texture, buttons
+     * NO human body, NO skin visible - pure product detail shot
      * 
      * 🎨 COLOR WEIGHTING: Applied to prevent color bias in macro shots
      */
@@ -1090,11 +1089,11 @@ export class PromptBuilderService {
         // 🎨 COLOR WEIGHTING
         const weightedColor = this.applyColorWeighting(product.visual_specs.color_name, 'closeup_front');
 
-        // 🎯 Priority 1: SUBJECT - Model wearing the garment, FRONT PART shown up close
-        const subjectPart = `Fashion model wearing ${weightedColor} ${product.general_info.product_name}. CLOSE-UP SHOT of the FRONT PART of the garment. Cropped view from chest/torso area, partial body visible. Model facing camera, face may be partially visible or cropped.`;
+        // 🎯 Priority 1: SUBJECT - Garment detail ONLY, NO human body
+        const subjectPart = `Extreme close-up detail shot of ${weightedColor} ${product.general_info.product_name}. PRODUCT ONLY - NO human body, NO skin visible. Focus on FRONT fabric details and logo/branding.`;
 
-        // Priority 2: Product Details on model - FRONT DETAILS UP CLOSE
-        const productData = `FOCUS ON FRONT DETAILS: Fabric: ${product.visual_specs.fabric_texture}. ${product.design_front.description}.${hardwareText} Sharp focus on front buttons, logo, zipper, collar, and texture details while worn.`;
+        // Priority 2: Product Details - FRONT DETAILS
+        const productData = `FRONT DETAIL SHOT: Fabric texture: ${product.visual_specs.fabric_texture}. ${product.design_front.description}.${hardwareText} Sharp macro focus on front logo, buttons, zipper, embroidery, and fabric weave. Clean product photography.`;
 
         // 🎯 Priority 3: DA ENVIRONMENT - Same location as other shots in DA atmosphere
         const leftItems = da.ground?.left_items || [];
@@ -1102,10 +1101,10 @@ export class PromptBuilderService {
         const leftProps = leftItems.length > 0 ? leftItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
         const rightProps = rightItems.length > 0 ? rightItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
         const propsText = [leftProps, rightProps].filter(Boolean).join(', ') || 'minimal styling';
-        const environmentPart = `Shot in DA atmosphere: ${da.background.type} backdrop with bokeh blur. Props visible in background: ${propsText}. Mood: ${da.mood || 'editorial elegance'}. ${da.lighting?.type || 'Soft studio lighting'}.`;
+        const environmentPart = `DA atmosphere: ${da.background.type} backdrop with soft bokeh blur. Props subtly visible: ${propsText}. ${da.lighting?.type || 'Soft studio lighting'}.`;
 
-        // Priority 4: Technical
-        const helpers = `Editorial fashion photography. Macro close-up of front garment details. ${qualitySuffix}`;
+        // Priority 4: Technical - NO HUMAN
+        const helpers = `Editorial product photography. Macro close-up. NO human body parts. NO skin. Pure garment detail. ${qualitySuffix}`;
 
         return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
@@ -1113,10 +1112,9 @@ export class PromptBuilderService {
 
 
     /**
-     * CLOSE UP BACK - MODEL WEARING GARMENT FROM BEHIND with Color Weighting
-     * Shows model from behind wearing the product in DA atmosphere, BACK PART SHOWN UP CLOSE
-     * Focus on back patch/branding, rear details
-     * Model's back to camera, showing rear of garment with logo visible
+     * CLOSE UP BACK - GARMENT DETAIL SHOT (NO MODEL)
+     * Shows ONLY the back part of the garment - patch, logo, stitching
+     * NO human body, NO skin visible - pure product detail shot
      * 
      * 🎨 COLOR WEIGHTING: Applied to prevent color bias in macro shots
      */
@@ -1150,11 +1148,11 @@ export class PromptBuilderService {
             geometryPhrase = 'Focus on the RECTANGULAR leather patch with sharp corners. ';
         }
 
-        // 🎯 Priority 1: SUBJECT - Model from behind, BACK PART shown up close
-        const subjectPart = `Fashion model photographed from behind wearing ${weightedColor} ${product.general_info.product_name}. CLOSE-UP SHOT of the BACK PART of the garment. Cropped view focusing on upper back/shoulders area. Model facing away from camera.`;
+        // 🎯 Priority 1: SUBJECT - Garment detail ONLY, NO human body
+        const subjectPart = `Extreme close-up detail shot of ${weightedColor} ${product.general_info.product_name}. PRODUCT ONLY - NO human body, NO skin visible. Focus on BACK fabric details, patch, and branding.`;
 
-        // Priority 2: Product Details - BACK DETAILS UP CLOSE
-        const productData = `FOCUS ON BACK DETAILS: ${geometryPhrase}Rear ${patchDetail} clearly visible and in sharp focus. Fabric: ${product.visual_specs.fabric_texture}${texturePhrase}.${techniqueText} Sharp focus on back logo, patch, stitching, and texture details.`;
+        // Priority 2: Product Details - BACK DETAILS
+        const productData = `BACK DETAIL SHOT: ${geometryPhrase}${patchDetail} in sharp macro focus. Fabric: ${product.visual_specs.fabric_texture}${texturePhrase}.${techniqueText} Sharp focus on back patch, logo, stitching, embroidery, and fabric weave. Clean product photography.`;
 
         // 🎯 Priority 3: DA ENVIRONMENT - Same location as other shots in DA atmosphere
         const leftItems = da.ground?.left_items || [];
@@ -1162,10 +1160,10 @@ export class PromptBuilderService {
         const leftProps = leftItems.length > 0 ? leftItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
         const rightProps = rightItems.length > 0 ? rightItems.map((item: any) => typeof item === 'string' ? item : item.name).join(', ') : '';
         const propsText = [leftProps, rightProps].filter(Boolean).join(', ') || 'minimal styling';
-        const environmentPart = `Shot in DA atmosphere: ${da.background.type} backdrop with bokeh blur. Props visible in background: ${propsText}. Mood: ${da.mood || 'editorial elegance'}. ${da.lighting?.type || 'Soft studio lighting'}.`;
+        const environmentPart = `DA atmosphere: ${da.background.type} backdrop with soft bokeh blur. Props subtly visible: ${propsText}. ${da.lighting?.type || 'Soft studio lighting'}.`;
 
-        // Priority 4: Technical
-        const helpers = `Editorial fashion photography. Macro close-up of back garment details. ${qualitySuffix}`;
+        // Priority 4: Technical - NO HUMAN
+        const helpers = `Editorial product photography. Macro close-up. NO human body parts. NO skin. Pure garment detail. ${qualitySuffix}`;
 
         return `${subjectPart} ${productData} ${environmentPart} ${helpers}`;
     }
