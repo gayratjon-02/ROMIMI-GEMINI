@@ -1,5 +1,5 @@
-// 🚀 QATIYAN: Faqat gemini-3-pro-image-preview modelidan foydalanish kerak
-// Bu model native image generation qo'llab-quvvatlaydi
+// IMPORTANT: Only use gemini-3-pro-image-preview model
+// This model supports native image generation
 // Reference: https://ai.google.dev/gemini-api/docs/image-generation
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 

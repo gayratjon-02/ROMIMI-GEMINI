@@ -1,7 +1,7 @@
 
 import { Logger } from '@nestjs/common';
 
-// Interface - validation natijasi
+// Interface - validation result
 export interface ValidationFlag {
     field: string;
     issue: string;
@@ -20,37 +20,37 @@ export class ProductAnalysisValidator {
     private readonly logger = new Logger(ProductAnalysisValidator.name);
 
     /**
-     * Asosiy validation funksiyasi
-     * Claude javobini tekshiradi va xatolarni tuzatadi
+     * Main validation function
+     * Validates Claude response and fixes errors
      */
     validate<T extends Record<string, any>>(parsed: T): ValidatedResult<T> {
         const flags: ValidationFlag[] = [];
         let data = JSON.parse(JSON.stringify(parsed)); // Deep clone
 
-        // 1. Fabric Type tekshiruvi
+        // 1. Fabric Type validation
         data = this.validateFabricType(data, flags);
 
-        // 2. Ankle Termination tekshiruvi (pants uchun)
+        // 2. Ankle Termination validation (for pants)
         data = this.validateAnkleTermination(data, flags);
 
-        // 3. Patch Placement tekshiruvi (Left/Right)
+        // 3. Patch Placement validation (Left/Right)
         data = this.validatePatchPlacement(data, flags);
 
-        // 4. Back Pocket tekshiruvi
+        // 4. Back Pocket validation
         data = this.validateBackPocket(data, flags);
 
-        // 5. Hex Color tekshiruvi
+        // 5. Hex Color validation
         data = this.validateHexColor(data, flags);
 
-        // 6. has_patch bo'lsa, kerakli fieldlar bormi
+        // 6. Check required fields when has_patch is true
         data = this.validatePatchFields(data, flags);
 
         // 7. Category validation (Pajama + zipper = Track Pants)
-        data = this.validateCategory(data, flags);  // ← BU QATOR QO'SHILDI!
+        data = this.validateCategory(data, flags);
 
         // Log
         if (flags.length > 0) {
-            this.logger.warn(`⚠️ Validation: ${flags.length} ta muammo topildi`);
+            this.logger.warn(`⚠️ Validation: ${flags.length} issues found`);
             flags.forEach(f => this.logger.warn(`  - ${f.field}: ${f.issue}`));
         }
 
@@ -63,30 +63,30 @@ export class ProductAnalysisValidator {
 
     /**
      * 1. FABRIC TYPE
-     * "corduroy" degan bo'lsa, lekin aslida ribbed jersey bo'lishi mumkin
+     * If "corduroy" is mentioned but it might actually be ribbed jersey
      */
     private validateFabricType<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         const texture = data.visual_specs?.fabric_texture?.toLowerCase() || '';
 
         if (texture.includes('corduroy')) {
-            // Ribbed jersey belgilari
+            // Ribbed jersey indicators
             const ribbedSigns = ['fine', 'stretch', 'jersey', 'knit', 'lightweight', 'soft'];
             const hasRibbedSigns = ribbedSigns.some(s => texture.includes(s));
 
-            // Corduroy belgilari
+            // Corduroy indicators
             const corduroySigns = ['cord', 'wale', 'wide rib', 'thick'];
             const hasCorduroySigns = corduroySigns.some(s => texture.includes(s));
 
             if (hasRibbedSigns && !hasCorduroySigns) {
                 const original = data.visual_specs.fabric_texture;
-                // Avtomatik tuzatish
+                // Auto-fix
                 data.visual_specs.fabric_texture = original
                     .replace(/corduroy/gi, 'ribbed jersey')
                     .replace(/fine-?corduroy/gi, 'fine-ribbed jersey');
 
                 flags.push({
                     field: 'visual_specs.fabric_texture',
-                    issue: 'Corduroy → Ribbed jersey ga o\'zgartirildi (stretch/fine belgisi bor)',
+                    issue: 'Changed Corduroy → Ribbed jersey (stretch/fine pattern detected)',
                     original,
                     corrected: data.visual_specs.fabric_texture,
                     confidence: 'auto_fixed',
@@ -99,7 +99,7 @@ export class ProductAnalysisValidator {
 
     /**
      * 2. ANKLE TERMINATION
-     * Zipper + Cuff = imkonsiz
+     * Zipper + Cuff = impossible combination
      */
     private validateAnkleTermination<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         const category = data.general_info?.category?.toLowerCase() || '';
@@ -114,12 +114,12 @@ export class ProductAnalysisValidator {
         if (hasZipper && hasCuff) {
             const original = data.garment_details.bottom_termination;
 
-            // Zipper ko'proq aniq, shuning uchun zipper qoldirish
+            // Zipper is more specific, so keep zipper
             data.garment_details.bottom_termination = 'Straight hem with side ankle zipper';
 
             flags.push({
                 field: 'garment_details.bottom_termination',
-                issue: 'IMKONSIZ: Zipper + Cuff birga bo\'lmaydi. Zipper qoldirildi.',
+                issue: 'IMPOSSIBLE: Zipper + Cuff cannot coexist. Kept zipper.',
                 original,
                 corrected: data.garment_details.bottom_termination,
                 confidence: 'auto_fixed',
@@ -131,7 +131,7 @@ export class ProductAnalysisValidator {
 
     /**
      * 3. PATCH PLACEMENT
-     * "left/right" bo'lsa, "wearer's" qo'shish
+     * Add "wearer's" prefix to left/right for clarity
      */
     private validatePatchPlacement<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         if (!data.design_back?.placement) return data;
@@ -148,7 +148,7 @@ export class ProductAnalysisValidator {
 
                 flags.push({
                     field: 'design_back.placement',
-                    issue: '"wearer\'s" qo\'shildi (orientation aniqlik uchun)',
+                    issue: 'Added "wearer\'s" prefix for orientation clarity',
                     original,
                     corrected: placement,
                     confidence: 'auto_fixed',
@@ -163,7 +163,7 @@ export class ProductAnalysisValidator {
 
                 flags.push({
                     field: 'design_back.placement',
-                    issue: '"wearer\'s" qo\'shildi (orientation aniqlik uchun)',
+                    issue: 'Added "wearer\'s" prefix for orientation clarity',
                     original,
                     corrected: placement,
                     confidence: 'auto_fixed',
@@ -176,7 +176,7 @@ export class ProductAnalysisValidator {
 
     /**
      * 4. BACK POCKET
-     * Pants bo'lsa, back pocket bo'lishi kerak
+     * Pants should have back pocket mentioned
      */
     private validateBackPocket<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         const category = data.general_info?.category?.toLowerCase() || '';
@@ -190,7 +190,7 @@ export class ProductAnalysisValidator {
         if (!hasBackPocket) {
             flags.push({
                 field: 'garment_details.pockets',
-                issue: 'Back pocket eslatilmagan. Ko\'p joggers da back welt pocket bor - rasmdan tekshiring.',
+                issue: 'Back pocket not mentioned. Most joggers have back welt pocket - verify from image.',
                 original: data.garment_details?.pockets || '',
                 confidence: 'needs_review',
             });
@@ -201,20 +201,20 @@ export class ProductAnalysisValidator {
 
     /**
      * 5. HEX COLOR
-     * Format to'g'ri bo'lishi kerak
+     * Format must be correct
      */
     private validateHexColor<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         const hex = data.visual_specs?.hex_code || '';
 
         if (hex && !/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-            // # yo'q bo'lsa, qo'shish
+            // Add # if missing
             if (/^[0-9A-Fa-f]{6}$/.test(hex)) {
                 const original = hex;
                 data.visual_specs.hex_code = `#${hex}`;
 
                 flags.push({
                     field: 'visual_specs.hex_code',
-                    issue: '# belgisi qo\'shildi',
+                    issue: 'Added # prefix',
                     original,
                     corrected: data.visual_specs.hex_code,
                     confidence: 'auto_fixed',
@@ -222,7 +222,7 @@ export class ProductAnalysisValidator {
             } else {
                 flags.push({
                     field: 'visual_specs.hex_code',
-                    issue: 'Noto\'g\'ri hex format',
+                    issue: 'Invalid hex format',
                     original: hex,
                     confidence: 'needs_review',
                 });
@@ -234,7 +234,7 @@ export class ProductAnalysisValidator {
 
     /**
      * 6. PATCH FIELDS
-     * has_patch: true bo'lsa, kerakli fieldlar to'liq bo'lishi kerak
+     * If has_patch: true, required fields must be complete
      */
     private validatePatchFields<T extends Record<string, any>>(data: T, flags: ValidationFlag[]): T {
         if (!data.design_back?.has_patch) return data;
@@ -252,7 +252,7 @@ export class ProductAnalysisValidator {
         if (missing.length > 0) {
             flags.push({
                 field: 'design_back',
-                issue: `has_patch: true, lekin bu fieldlar yo'q: ${missing.join(', ')}`,
+                issue: `has_patch: true, but these fields are missing: ${missing.join(', ')}`,
                 original: JSON.stringify(missing),
                 confidence: 'critical',
             });
@@ -279,7 +279,7 @@ export class ProductAnalysisValidator {
 
             flags.push({
                 field: 'general_info.category',
-                issue: 'Pajama + ankle zipper = Track Pants ga o\'zgartirildi',
+                issue: 'Changed Pajama + ankle zipper → Track Pants',
                 original,
                 corrected: data.general_info.category,
                 confidence: 'auto_fixed',
@@ -293,7 +293,7 @@ export class ProductAnalysisValidator {
 
             flags.push({
                 field: 'general_info.category',
-                issue: 'Joggers + ankle zipper (no cuff) = Track Pants ga o\'zgartirildi',
+                issue: 'Changed Joggers + ankle zipper (no cuff) → Track Pants',
                 original,
                 corrected: data.general_info.category,
                 confidence: 'auto_fixed',
@@ -307,7 +307,7 @@ export class ProductAnalysisValidator {
 
             flags.push({
                 field: 'general_info.category',
-                issue: 'Track Pants + elastic cuff (no zipper) = Joggers ga o\'zgartirildi',
+                issue: 'Changed Track Pants + elastic cuff (no zipper) → Joggers',
                 original,
                 corrected: data.general_info.category,
                 confidence: 'auto_fixed',
@@ -319,17 +319,9 @@ export class ProductAnalysisValidator {
 }
 
 /**
- * Helper function - tez ishlatish uchun
+ * Helper function - for quick usage
  */
 export function validateProductAnalysis<T extends Record<string, any>>(parsed: T): ValidatedResult<T> {
     const validator = new ProductAnalysisValidator();
     return validator.validate(parsed);
 }
-
-
-
-
-
-
-
-
