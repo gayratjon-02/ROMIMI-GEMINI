@@ -1008,12 +1008,14 @@ export class PromptBuilderService {
             `${product.design_front.description}. ${logoTextFront}.`;
 
         // Priority 2: Shot - Different display for pants vs tops
+        // 🎯 Use DA background instead of hardcoded wood - matches collection's artistic direction
+        const daBackground = da.background?.type || 'elegant studio backdrop';
         const shotAction = isPants
-            ? `Professional product photography. ${sizeDescription}. Pants FOLDED neatly over elegant wooden hanger bar. Hanger hanging from small metal wall hook on dark walnut wood panel wall. Front view, centered composition. Waistband at top, legs folded and draped elegantly.`
-            : `Professional product photography. ${sizeDescription}. Garment displayed on elegant wooden hanger. Hanger hanging from small metal wall hook on dark walnut wood panel wall. Front view, centered composition. Full garment visible from collar to hem.`;
+            ? `Professional product photography. ${sizeDescription}. Pants FOLDED neatly over elegant wooden hanger bar. Hanger hanging from small metal wall hook. Front view, centered composition. Waistband at top, legs folded and draped elegantly.`
+            : `Professional product photography. ${sizeDescription}. Garment displayed on elegant wooden hanger. Hanger hanging from small metal wall hook. Front view, centered composition. Full garment visible from collar to hem.`;
 
-        // 🎯 Priority 3: DA ENVIRONMENT - wood panel wall is primary background
-        const environmentPart = `Dark wooden wall panel backdrop with visible wood grain texture. Clean, minimalist luxury aesthetic. Mood: ${da.mood || 'editorial elegance'}. Soft diffused lighting.`;
+        // 🎯 Priority 3: DA ENVIRONMENT - Use collection's artistic direction background
+        const environmentPart = `${daBackground} backdrop. Clean, minimalist luxury aesthetic. Mood: ${da.mood || 'editorial elegance'}. ${da.lighting?.type || 'Soft diffused lighting'}, ${da.lighting?.temperature || 'warm tones'}.`;
 
         // Priority 4: Helpers
         const helpers = `NO PEOPLE, NO HANDS, NO MANNEQUIN. Clean wall-mounted hanger display, pristine condition. ${qualitySuffix}`;
@@ -1072,12 +1074,14 @@ export class PromptBuilderService {
             `${product.design_back.description}. ${patchDetail}${technique}`;
 
         // Priority 2: Shot - Different display for pants vs tops
+        // 🎯 Use DA background instead of hardcoded wood - matches collection's artistic direction
+        const daBackground = da.background?.type || 'elegant studio backdrop';
         const shotAction = isPants
-            ? `Professional product photography. ${sizeDescription}. Pants FOLDED neatly over elegant wooden hanger bar, showing BACK. Hanger hanging from small metal wall hook on dark walnut wood panel wall. Back pockets and waistband clearly visible. Legs folded and draped elegantly.`
-            : `Professional product photography. ${sizeDescription}. Garment displayed on elegant wooden hanger, turned to show BACK. Hanger hanging from small metal wall hook on dark walnut wood panel wall. Centered composition. Rear details clearly visible from shoulders to hem.`;
+            ? `Professional product photography. ${sizeDescription}. Pants FOLDED neatly over elegant wooden hanger bar, showing BACK. Hanger hanging from small metal wall hook. Back pockets and waistband clearly visible. Legs folded and draped elegantly.`
+            : `Professional product photography. ${sizeDescription}. Garment displayed on elegant wooden hanger, turned to show BACK. Hanger hanging from small metal wall hook. Centered composition. Rear details clearly visible from shoulders to hem.`;
 
-        // 🎯 Priority 3: DA ENVIRONMENT - wood panel wall is primary background
-        const environmentPart = `Dark wooden wall panel backdrop with visible wood grain texture. Clean, minimalist luxury aesthetic. Mood: ${da.mood || 'editorial elegance'}. Soft diffused lighting.`;
+        // 🎯 Priority 3: DA ENVIRONMENT - Use collection's artistic direction background
+        const environmentPart = `${daBackground} backdrop. Clean, minimalist luxury aesthetic. Mood: ${da.mood || 'editorial elegance'}. ${da.lighting?.type || 'Soft diffused lighting'}, ${da.lighting?.temperature || 'warm tones'}.`;
 
         // Priority 4: Helpers
         const helpers = `NO PEOPLE, NO HANDS, NO MANNEQUIN. Clean wall-mounted hanger display. ${qualitySuffix}`;

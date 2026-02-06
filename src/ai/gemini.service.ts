@@ -460,15 +460,25 @@ High quality studio lighting, sharp details, clean background.`;
 		const ratioText = this.mapAspectRatioToGemini(aspectRatio ?? '4:5');
 		const resolutionText = this.mapResolutionToGemini(resolution);
 
-		// Enhanced prompt with reference instruction
+		// Enhanced prompt with reference instruction - STRONGER LOGO EMPHASIS
 		const referencePrompt = `🎯 CRITICAL: Use the provided reference images as EXACT VISUAL GUIDE.
 You MUST match ALL details from reference images precisely:
+
+🏷️ LOGO/BRANDING (HIGHEST PRIORITY):
+- EXACT logo text, font, and typography from reference
+- EXACT logo position, size, and proportions
+- EXACT logo colors and contrast
+- Text must be SHARP and LEGIBLE even at small sizes
+- If reference has embroidered/printed logo, match that technique exactly
+- NO approximations - match character-by-character
+
+👕 GARMENT DETAILS:
 - EXACT pocket count and positions (count every pocket!)
 - EXACT button count and placement
 - EXACT color (sample HEX from reference)
-- EXACT logo/branding details and positions
 - EXACT fabric texture and material appearance
 - EXACT collar/cuff/seam details
+- EXACT zipper/hardware placement
 
 Generate a NEW professional product photography based on these references.
 The generated image must be VISUALLY IDENTICAL to the reference product.
@@ -476,7 +486,7 @@ The generated image must be VISUALLY IDENTICAL to the reference product.
 PHOTOGRAPHY REQUIREMENTS:
 ${this.sanitizePromptForImageGeneration(prompt)}
 
-HIGH QUALITY OUTPUT: Professional e-commerce photography, studio lighting, sharp details.`;
+HIGH QUALITY OUTPUT: Professional e-commerce photography, studio lighting, sharp details. Crisp logo rendering.`;
 
 		console.log('🔧 ENHANCED PROMPT (sent to Gemini):');
 		console.log('─────────────────────────────────────────────────────────────────────');
